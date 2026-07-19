@@ -83,6 +83,7 @@
   .btn-gold{background:var(--gold);color:var(--ink);}
   .btn[disabled]{opacity:.4;cursor:not-allowed;}
   .btn-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+  #save-hold-btn{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;}
 
   /* ---------- cards / lists ---------- */
   .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:20px;width:min(92vw,560px);}
@@ -321,33 +322,55 @@ const SKELETON_PAIRS = [
 ];
 
 /* =====================================================================
-   STORAGE HELPERS  (window.storage — persists across sessions)
-   reference poses + leaderboard are SHARED so the whole class sees them
+   STORAGE HELPERS
+   IMPORTANT: window.storage only exists inside Claude's own in-chat preview.
+   Once this file is hosted on Netlify/GitHub Pages/etc. (as it needs to be,
+   for camera access), window.storage does not exist — calling it threw an
+   error that silently killed the save, which is why "recording" got stuck
+   forever. We now use localStorage (works on any real website) and fall
+   back to window.storage only if it happens to be present, and every call
+   is wrapped so a storage failure always resolves instead of hanging.
+   NOTE: localStorage is per-browser/per-device. That's fine for the normal
+   setup here (one shared TV/tablet running the whole class activity), but
+   reference poses won't transfer automatically to a different device.
    ===================================================================== */
+const hasClaudeStorage = (typeof window!=='undefined') && window.storage && typeof window.storage.get==='function';
+async function storageGet(key){
+  try{
+    if(hasClaudeStorage){ const r = await window.storage.get(key, true); return r ? r.value : null; }
+    return localStorage.getItem(key);
+  }catch(e){ console.warn('storageGet failed', key, e); return null; }
+}
+async function storageSet(key, value){
+  try{
+    if(hasClaudeStorage){ await window.storage.set(key, value, true); return true; }
+    localStorage.setItem(key, value); return true;
+  }catch(e){ console.warn('storageSet failed', key, e); return false; }
+}
 async function loadReferences(){
   try{
-    const res = await window.storage.get('dance-reference-poses', true);
-    return res ? JSON.parse(res.value) : {};
+    const v = await storageGet('dance-reference-poses');
+    return v ? JSON.parse(v) : {};
   }catch(e){ return {}; }
 }
 async function saveReference(poseId, framesSeq){
   const refs = await loadReferences();
   refs[poseId] = { framesSeq, savedAt: Date.now() };
-  await window.storage.set('dance-reference-poses', JSON.stringify(refs), true);
+  return await storageSet('dance-reference-poses', JSON.stringify(refs));
 }
 async function loadTolerance(){
   try{
-    const res = await window.storage.get('dance-tolerance', true);
-    return res ? parseFloat(res.value) : 0.35;
+    const v = await storageGet('dance-tolerance');
+    return v ? parseFloat(v) : 0.35;
   }catch(e){ return 0.35; }
 }
 async function saveTolerance(v){
-  await window.storage.set('dance-tolerance', String(v), true);
+  await storageSet('dance-tolerance', String(v));
 }
 async function loadLeaderboard(catId){
   try{
-    const res = await window.storage.get('leaderboard:'+catId, true);
-    return res ? JSON.parse(res.value) : [];
+    const v = await storageGet('leaderboard:'+catId);
+    return v ? JSON.parse(v) : [];
   }catch(e){ return []; }
 }
 async function addLeaderboardEntry(catId, name, timeMs){
@@ -355,7 +378,7 @@ async function addLeaderboardEntry(catId, name, timeMs){
   board.push({name, timeMs, date:new Date().toLocaleDateString('th-TH')});
   board.sort((a,b)=>a.timeMs-b.timeMs);
   const top = board.slice(0,10);
-  await window.storage.set('leaderboard:'+catId, JSON.stringify(top), true);
+  await storageSet('leaderboard:'+catId, JSON.stringify(top));
   return top;
 }
 
@@ -514,6 +537,7 @@ function stopAllCameras(){
     if(v && v.srcObject){ v.srcObject.getTracks().forEach(t=>t.stop()); v.srcObject=null; }
   });
   gameLoopActive=false; calLoopActive=false;
+  if(typeof isRecording!=='undefined' && isRecording){ isRecording=false; if(typeof clearRecordingTimers==='function') clearRecordingTimers(); }
 }
 
 /* =====================================================================
@@ -590,7 +614,7 @@ async function gameLoop(){
     const poses = await detector.estimatePoses(video);
     if(poses[0]){
       const live = poses[0].keypoints;
-      drawSkeleton(ctx, toXY(live), 'rgba(19,115,95,0.95)', false, category.kp);
+      drawSkeleton(ctx, toXY(live, video, canvas.width, canvas.height), 'rgba(19,115,95,0.95)', false, category.kp);
       const liveNorm = normalizePose(live);
       if(liveNorm && seq.length>0){
         seq.forEach((rn,idx)=>{
@@ -623,8 +647,23 @@ async function gameLoop(){
   }
   requestAnimationFrame(gameLoop);
 }
-function toXY(keypoints){
-  const out={}; keypoints.forEach(k=>{ out[k.name]={x:k.x,y:k.y,score:k.score}; }); return out;
+function toXY(keypoints, video, canvasW, canvasH){
+  // The pose model reports coordinates in the CAMERA'S native pixel size (video.videoWidth/Height),
+  // which is usually a different size than the canvas we draw on — and the video itself is shown
+  // with object-fit:cover (cropped to fill the box). Drawing raw coordinates directly, as before,
+  // made the skeleton drift off the body and sometimes fall outside the visible canvas entirely.
+  // This reproduces the same "cover" mapping so the skeleton lines up with what's on screen.
+  const vw = (video && video.videoWidth) || canvasW;
+  const vh = (video && video.videoHeight) || canvasH;
+  const scale = Math.max(canvasW/vw, canvasH/vh);
+  const offX = (vw*scale - canvasW)/2;
+  const offY = (vh*scale - canvasH)/2;
+  const out={};
+  keypoints.forEach(k=>{
+    if(k.score < 0.35) return; // drop low-confidence points instead of drawing noisy/jumpy guesses
+    out[k.name] = { x:k.x*scale-offX, y:k.y*scale-offY, score:k.score };
+  });
+  return out;
 }
 function normalizeStored(keypoints){ return normalizePose(keypoints); }
 // allowedNames: if provided, only draw joints/bones within that set (used to focus on hand or foot only)
@@ -641,6 +680,25 @@ function drawSkeleton(ctx, pts, color, dashed, allowedNames){
   Object.entries(pts).forEach(([name,p])=>{
     if(!allowed(name)) return;
     ctx.beginPath(); ctx.arc(p.x,p.y,5,0,7); ctx.fill();
+  });
+}
+// Renders the tracked body as a solid gold "shadow" shape with a red border outline,
+// instead of thin stick-figure lines — easier to see clearly on a phone screen.
+function drawBodyShadow(ctx, pts, allowedNames){
+  const allowed = n => !allowedNames || allowedNames.includes(n);
+  const segments = SKELETON_PAIRS.filter(([a,b]) => allowed(a) && allowed(b) && pts[a] && pts[b]);
+  // pass 1: thick red stroke underneath = the border
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.strokeStyle='rgba(196,46,46,0.95)'; ctx.lineWidth=26;
+  segments.forEach(([a,b])=>{ ctx.beginPath(); ctx.moveTo(pts[a].x,pts[a].y); ctx.lineTo(pts[b].x,pts[b].y); ctx.stroke(); });
+  // pass 2: slightly thinner gold stroke on top = the shadow fill
+  ctx.strokeStyle='rgba(212,175,55,0.95)'; ctx.lineWidth=16;
+  segments.forEach(([a,b])=>{ ctx.beginPath(); ctx.moveTo(pts[a].x,pts[a].y); ctx.lineTo(pts[b].x,pts[b].y); ctx.stroke(); });
+  // joints: same red-border-then-gold-fill treatment so corners look continuous
+  Object.entries(pts).forEach(([name,p])=>{
+    if(!allowed(name)) return;
+    ctx.fillStyle='rgba(196,46,46,0.95)'; ctx.beginPath(); ctx.arc(p.x,p.y,13,0,7); ctx.fill();
+    ctx.fillStyle='rgba(212,175,55,0.95)'; ctx.beginPath(); ctx.arc(p.x,p.y,8,0,7); ctx.fill();
   });
 }
 async function onPoseConfirmed(){
@@ -691,11 +749,13 @@ async function calLoop(){
   const canvas = document.getElementById('cal-overlay');
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0,0,canvas.width,canvas.height);
+  const catKp = currentCalibratePose.cat.kp;
   if(video.readyState>=2 && detector){
     const poses = await detector.estimatePoses(video);
     if(poses[0]){
       lastLiveKeypoints = poses[0].keypoints;
-      drawSkeleton(ctx, toXY(lastLiveKeypoints), 'rgba(122,31,43,0.9)', false, currentCalibratePose.cat.kp);
+      // live tracked body shown as a solid gold "shadow" shape with a red border outline
+      drawBodyShadow(ctx, toXY(lastLiveKeypoints, video, canvas.width, canvas.height), catKp);
     }
   }
   requestAnimationFrame(calLoop);
@@ -703,41 +763,66 @@ async function calLoop(){
 // Recording: hold the button and perform the movement. We sample frames while held so
 // multi-step movements (ซอยเท้า, เดิน, ไป-มา ฯลฯ) are captured as a short sequence, not one snapshot.
 const MIN_HOLD_MS = 350, MAX_HOLD_MS = 3000, SAMPLE_MS = 120;
-let saveHoldStart=null, sampleTimer=null, maxCapTimer=null, recordingFrames=[];
+let isRecording=false, saveHoldStart=null, sampleTimer=null, maxCapTimer=null, recordingFrames=[];
 const saveBtn = document.getElementById('save-hold-btn');
 const recIndicator = document.getElementById('cal-rec-indicator');
+
+function clearRecordingTimers(){
+  if(sampleTimer){ clearInterval(sampleTimer); sampleTimer=null; }
+  if(maxCapTimer){ clearTimeout(maxCapTimer); maxCapTimer=null; }
+}
 function startSaveHold(){
+  if(isRecording) return; // guard: ignore a duplicate start if two pointer events fire for one press
+  isRecording = true;
+  clearRecordingTimers();
   saveHoldStart = Date.now();
   recordingFrames = [];
   saveBtn.textContent='● กำลังอัด...';
+  recIndicator.textContent = 'บันทึกแล้ว 0.0s (ปล่อยนิ้วเมื่อทำท่าเสร็จ)';
   sampleTimer = setInterval(()=>{
     if(lastLiveKeypoints) recordingFrames.push(lastLiveKeypoints);
     const secs = ((Date.now()-saveHoldStart)/1000).toFixed(1);
     recIndicator.textContent = 'บันทึกแล้ว '+secs+'s (ปล่อยนิ้วเมื่อทำท่าเสร็จ)';
   }, SAMPLE_MS);
-  maxCapTimer = setTimeout(()=>{ finishSaveHold(); }, MAX_HOLD_MS);
+  maxCapTimer = setTimeout(finishSaveHold, MAX_HOLD_MS);
 }
 async function finishSaveHold(){
-  clearInterval(sampleTimer); clearTimeout(maxCapTimer);
-  if(!saveHoldStart) return;
-  const heldMs = Date.now()-saveHoldStart;
-  saveHoldStart=null;
+  if(!isRecording) return; // avoid double-processing (e.g. pointerup AND pointercancel for the same press)
+  isRecording = false;
+  clearRecordingTimers();
+  const heldMs = saveHoldStart ? Date.now()-saveHoldStart : 0;
+  saveHoldStart = null;
   if(heldMs < MIN_HOLD_MS || recordingFrames.length===0){
     saveBtn.textContent='กดค้างไว้เพื่ออัดท่า';
-    recIndicator.textContent='สั้นเกินไป ลองอีกครั้ง (ค้างไว้อย่างน้อยครึ่งวินาที)';
+    recIndicator.textContent='สั้นเกินไป หรือกล้องยังไม่เห็นตัวชัดเจน ลองอีกครั้ง (ค้างไว้อย่างน้อยครึ่งวินาที)';
     return;
   }
-  await saveReference(currentCalibratePose.pose.id, recordingFrames);
-  saveBtn.textContent = recordingFrames.length>3 ? 'บันทึกท่าเคลื่อนไหวแล้ว ✓' : 'บันทึกท่าแล้ว ✓';
-  recIndicator.textContent = 'เก็บไว้ '+recordingFrames.length+' จังหวะ';
-  setTimeout(()=>{ saveBtn.textContent='กดค้างไว้เพื่ออัดท่า'; goTo('screen-teacher'); }, 800);
+  try{
+    await saveReference(currentCalibratePose.pose.id, recordingFrames);
+    saveBtn.textContent = recordingFrames.length>3 ? 'บันทึกท่าเคลื่อนไหวแล้ว ✓' : 'บันทึกท่าแล้ว ✓';
+    recIndicator.textContent = 'เก็บไว้ '+recordingFrames.length+' จังหวะ';
+    setTimeout(()=>{ saveBtn.textContent='กดค้างไว้เพื่ออัดท่า'; goTo('screen-teacher'); }, 800);
+  }catch(err){
+    console.error('save reference failed', err);
+    saveBtn.textContent='กดค้างไว้เพื่ออัดท่า';
+    recIndicator.textContent='บันทึกไม่สำเร็จ ลองอีกครั้ง (ตรวจสอบว่าเบราวเซอร์อนุญาต localStorage)';
+  }
 }
 function cancelSaveHold(){ finishSaveHold(); }
-saveBtn.addEventListener('mousedown', startSaveHold);
-saveBtn.addEventListener('touchstart', (e)=>{e.preventDefault();startSaveHold();});
-saveBtn.addEventListener('mouseup', cancelSaveHold);
-saveBtn.addEventListener('mouseleave', cancelSaveHold);
-saveBtn.addEventListener('touchend', cancelSaveHold);
+
+// Pointer Events unify mouse + touch + pen in one event model, and pointer capture keeps
+// the press "alive" even if a finger slides slightly off the button. This also fixes the
+// tablet bug where a long-press triggers the browser's own context menu / text-selection
+// gesture (which used to leave the old separate touch/mouse listeners stuck mid-recording).
+saveBtn.addEventListener('pointerdown', (e)=>{
+  e.preventDefault();
+  try{ saveBtn.setPointerCapture(e.pointerId); }catch(err){}
+  startSaveHold();
+});
+saveBtn.addEventListener('pointerup', cancelSaveHold);
+saveBtn.addEventListener('pointercancel', cancelSaveHold);
+saveBtn.addEventListener('pointerleave', (e)=>{ if(e.pointerType==='mouse') cancelSaveHold(); });
+saveBtn.addEventListener('contextmenu', (e)=>e.preventDefault());
 
 /* =====================================================================
    HOME LEADERBOARD PREVIEW
