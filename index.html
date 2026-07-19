@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@500;700;900&family=Noto+Sans+Thai:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-segmentation@1.0.2/dist/body-segmentation.min.js"></script>
 <style>
   :root{
     --cream:#FBF5E9;
@@ -258,6 +259,7 @@
   </div>
   <p class="note" style="margin-top:6px;" id="cal-rec-indicator"></p>
   <p class="note" style="margin-top:4px;" id="cal-hint">ท่านิ่ง: กดค้างไว้ครึ่งวินาทีแล้วปล่อย · ท่าเคลื่อนไหว: กดค้างไว้แล้วทำท่าให้ครบกระบวนท่า จากนั้นปล่อยนิ้ว (สูงสุด 3 วินาที)</p>
+  <p class="note" style="margin-top:4px;">เคล็ดลับ: อยู่ในที่แสงสว่างพอเหมาะและพื้นหลังไม่รกจะช่วยให้เห็นรูปร่างเงาชัดเจนขึ้น</p>
 </div>
 
 <script>
@@ -525,6 +527,23 @@ async function ensureModel(){
   );
   modelReady = true;
 }
+// True body-shape silhouette (captures real arm/hand/finger/leg outlines from the camera
+// image itself, instead of an approximated stick figure). Used only in the calibration
+// screen where precise shape matters most. Falls back gracefully if unsupported.
+let segmenter=null, segmenterReady=false, segmenterFailed=false;
+async function ensureSegmenter(){
+  if(segmenterReady || segmenterFailed) return;
+  try{
+    segmenter = await bodySegmentation.createSegmenter(
+      bodySegmentation.SupportedModels.MediaPipeSelfieSegmentation,
+      { runtime:'tfjs', modelType:'general' }
+    );
+    segmenterReady = true;
+  }catch(e){
+    console.warn('Silhouette model failed to load — falling back to the outline view.', e);
+    segmenterFailed = true;
+  }
+}
 async function startCamera(videoEl){
   const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user', width:640, height:480 }, audio:false });
   videoEl.srcObject = stream;
@@ -733,6 +752,7 @@ let calLoopActive=false; let lastLiveKeypoints=null;
 async function startCalibrateScreen(sel){
   document.getElementById('cal-pose-name').textContent = sel.pose.name+'  ('+sel.cat.label+')';
   await ensureModel();
+  ensureSegmenter(); // don't block camera start on this — it can finish loading in the background
   const video = document.getElementById('cal-video');
   await startCamera(video);
   const canvas = document.getElementById('cal-overlay');
@@ -743,6 +763,45 @@ async function startCalibrateScreen(sel){
   calLoopActive = true;
   requestAnimationFrame(calLoop);
 }
+let silhouetteOffscreen=null;
+// Renders the person's real outline (arms/hands/fingers/torso/legs/feet as the camera
+// actually sees them) as a solid gold shadow with a red border — far more detailed than
+// a joint-based stick figure. Returns true if it successfully drew something.
+async function drawSilhouetteFromSegmentation(ctx, video, canvasW, canvasH){
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if(!vw || !vh) return false;
+  const segmentation = await segmenter.segmentPeople(video);
+  if(!segmentation || !segmentation[0]) return false;
+
+  const goldMask = await bodySegmentation.toBinaryMask(
+    segmentation[0], {r:212,g:175,b:55,a:255}, {r:0,g:0,b:0,a:0}, false, 0.6);
+  const redMask = await bodySegmentation.toBinaryMask(
+    segmentation[0], {r:196,g:46,b:46,a:255}, {r:0,g:0,b:0,a:0}, false, 0.6);
+
+  if(!silhouetteOffscreen) silhouetteOffscreen = document.createElement('canvas');
+  silhouetteOffscreen.width = vw; silhouetteOffscreen.height = vh;
+  const offCtx = silhouetteOffscreen.getContext('2d');
+  offCtx.clearRect(0,0,vw,vh);
+
+  // fake a "grown"/dilated red outline by stamping the red mask at several small offsets —
+  // then the gold fill (drawn un-offset, on top) covers the center and leaves just a red
+  // border showing around the true body edge
+  const redBitmap = await createImageBitmap(redMask);
+  const R = 5;
+  [[-R,0],[R,0],[0,-R],[0,R],[-R,-R],[R,-R],[-R,R],[R,R]].forEach(([dx,dy])=>{
+    offCtx.drawImage(redBitmap, dx, dy);
+  });
+  const goldBitmap = await createImageBitmap(goldMask);
+  offCtx.drawImage(goldBitmap, 0, 0);
+
+  // map from the camera's native resolution to the displayed "cover" canvas area
+  // (identical cropping math to toXY, so it lines up with where the live tracking used to be)
+  const scale = Math.max(canvasW/vw, canvasH/vh);
+  const srcW = canvasW/scale, srcH = canvasH/scale;
+  const srcX = (vw-srcW)/2, srcY = (vh-srcH)/2;
+  ctx.drawImage(silhouetteOffscreen, srcX, srcY, srcW, srcH, 0, 0, canvasW, canvasH);
+  return true;
+}
 async function calLoop(){
   if(!calLoopActive) return;
   const video = document.getElementById('cal-video');
@@ -750,13 +809,19 @@ async function calLoop(){
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0,0,canvas.width,canvas.height);
   const catKp = currentCalibratePose.cat.kp;
+
   if(video.readyState>=2 && detector){
     const poses = await detector.estimatePoses(video);
-    if(poses[0]){
-      lastLiveKeypoints = poses[0].keypoints;
-      // live tracked body shown as a solid gold "shadow" shape with a red border outline
-      drawBodyShadow(ctx, toXY(lastLiveKeypoints, video, canvas.width, canvas.height), catKp);
-    }
+    if(poses[0]) lastLiveKeypoints = poses[0].keypoints; // still needed: this is what actually gets recorded
+  }
+
+  let drewSilhouette = false;
+  if(segmenterReady && video.readyState>=2){
+    try{ drewSilhouette = await drawSilhouetteFromSegmentation(ctx, video, canvas.width, canvas.height); }
+    catch(e){ console.warn('silhouette draw failed this frame, using outline fallback', e); }
+  }
+  if(!drewSilhouette && lastLiveKeypoints){
+    drawBodyShadow(ctx, toXY(lastLiveKeypoints, video, canvas.width, canvas.height), catKp);
   }
   requestAnimationFrame(calLoop);
 }
