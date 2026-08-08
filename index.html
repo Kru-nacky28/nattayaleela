@@ -276,9 +276,6 @@ const CATEGORIES = [
   { id:'hand',    group:'นาฏยศัพท์', label:'นาฏยศัพท์ส่วนมือ', kp:KP_HAND, poses:[
       {id:'jeeb_ngai',    name:'จีบหงาย'},
       {id:'jeeb_kwam',    name:'จีบคว่ำ'},
-      {id:'jeeb_prokkang',name:'จีบปรกข้าง'},
-      {id:'jeeb_songlang',name:'จีบส่งหลัง'},
-      {id:'jeeb_lorkaew', name:'จีบล่อแก้ว'},
       {id:'wong_bon',     name:'วงบน'},
       {id:'wong_klang',   name:'วงกลาง'},
       {id:'wong_lang',    name:'วงล่าง'},
@@ -289,7 +286,6 @@ const CATEGORIES = [
       {id:'yok_tao',    name:'ยกเท้า'},
       {id:'kratung_tao',name:'กระทุ้งเท้า'},
       {id:'kradok_lang',name:'กระดกหลัง'},
-      {id:'kradok_seaw',name:'กระดกเสี้ยว'},
   ]},
   { id:'speech', group:'ภาษาท่า', label:'ภาษาท่าแทนคำพูด', kp:KP_FULL, poses:[
       {id:'ma',       name:'มา'},
@@ -297,13 +293,6 @@ const CATEGORIES = [
       {id:'patiseit', name:'ปฏิเสธ'},
       {id:'chan',     name:'ฉัน'},
       {id:'ter',      name:'เธอ'},
-      {id:'khochern', name:'ขอเชิญ'},
-  ]},
-  { id:'action', group:'ภาษาท่า', label:'ภาษาท่าแทนอากัปกิริยา', kp:KP_FULL, poses:[
-      {id:'doen', name:'เดิน'},
-      {id:'nang', name:'นั่ง'},
-      {id:'yeun', name:'ยืน'},
-      {id:'non',  name:'นอน'},
   ]},
   { id:'emotion', group:'ภาษาท่า', label:'ภาษาท่าแทนอารมณ์ความรู้สึก', kp:KP_FULL, poses:[
       {id:'rak',     name:'รัก'},
@@ -355,9 +344,9 @@ async function loadReferences(){
     return v ? JSON.parse(v) : {};
   }catch(e){ return {}; }
 }
-async function saveReference(poseId, framesSeq){
+async function saveReference(poseId, framesSeq, shadowFrames){
   const refs = await loadReferences();
-  refs[poseId] = { framesSeq, savedAt: Date.now() };
+  refs[poseId] = { framesSeq, shadowFrames: shadowFrames||[], savedAt: Date.now() };
   return await storageSet('dance-reference-poses', JSON.stringify(refs));
 }
 async function loadTolerance(){
@@ -435,7 +424,7 @@ function applyZoomClass(zoomWrapEl, focusTagEl, catId){
    APP STATE / NAVIGATION
    ===================================================================== */
 let state = { playerName:'', category:null, poseIndex:0, startTime:0, refs:{}, tolerance:0.35,
-               refSeqNorm:[], covered:new Set(), poseStartTime:0 };
+               refSeqNorm:[], shadowImages:[], covered:new Set(), poseStartTime:0 };
 let detector=null, modelReady=false;
 
 function goTo(id){
@@ -577,7 +566,7 @@ async function startGameScreen(){
   const wrap = document.getElementById('stage-wrap');
   canvas.width = wrap.clientWidth; canvas.height = wrap.clientHeight;
   applyZoomClass(document.getElementById('zoom-wrap'), document.getElementById('focus-tag'), state.category.id);
-  document.getElementById('game-hint').textContent = 'ขยับตามเงาสีทอง ถ้าท่านั้นมีการเคลื่อนไหว เงาจะขยับให้ดูตัวอย่างด้วย';
+  document.getElementById('game-hint').textContent = 'ขยับตามเงาดำ ถ้าท่านั้นมีการเคลื่อนไหว เงาจะขยับให้ดูตัวอย่างด้วย';
   state.startTime = Date.now();
   gameLoopActive = true;
   updatePoseCaption();
@@ -595,6 +584,9 @@ function beginPose(){
   const pose = currentGamePose();
   const refEntry = state.refs[pose.id];
   state.refSeqNorm = refEntry ? refEntry.framesSeq.map(f=>normalizePose(f)).filter(Boolean) : [];
+  state.shadowImages = (refEntry && refEntry.shadowFrames && refEntry.shadowFrames.length>0)
+    ? refEntry.shadowFrames.map(src=>{ const img=new Image(); img.src=src; return img; })
+    : [];
   state.covered = new Set();
   state.poseStartTime = Date.now();
   holdStart = null;
@@ -618,22 +610,25 @@ async function gameLoop(){
   const seq = state.refSeqNorm;
   let statusEl = document.getElementById('hud-status');
 
-  // animate the ghost through the recorded sequence (loops) — this IS the "moves through the
-  // correct steps" behaviour for dynamic poses; for static poses seq.length is 1 so it just holds
-  let ghostNorm = null;
-  if(seq.length>0){
-    const ghostIdx = Math.floor((Date.now()-state.poseStartTime)/GHOST_FRAME_MS) % seq.length;
-    ghostNorm = seq[ghostIdx];
-    const pxScale = Math.min(canvas.width,canvas.height)*0.55;
-    const drawn = denormalizeForDraw(ghostNorm, canvas.width, canvas.height, pxScale);
-    drawSkeleton(ctx, drawn, 'rgba(201,162,39,0.9)', true, category.kp);
+  // animate the black-silhouette reference by cycling through the captured snapshot images
+  // (this IS the "moves through the correct steps" behaviour for dynamic poses; for static
+  // poses there's only 1-2 images, so it just holds still)
+  if(state.shadowImages.length>0){
+    const idx = Math.floor((Date.now()-state.poseStartTime)/GHOST_FRAME_MS) % state.shadowImages.length;
+    const img = state.shadowImages[idx];
+    if(img && img.complete && img.naturalWidth>0){
+      ctx.globalAlpha = 0.9;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = 1;
+    }
   }
 
   if(video.readyState>=2 && detector){
     const poses = await detector.estimatePoses(video);
     if(poses[0]){
       const live = poses[0].keypoints;
-      drawSkeleton(ctx, toXY(live, video, canvas.width, canvas.height), 'rgba(19,115,95,0.95)', false, category.kp);
+      // student's own tracked body: thin light outline, drawn on top of the black reference
+      drawSkeleton(ctx, toXY(live, video, canvas.width, canvas.height), 'rgba(251,245,233,0.95)', false, category.kp);
       const liveNorm = normalizePose(live);
       if(liveNorm && seq.length>0){
         seq.forEach((rn,idx)=>{
@@ -658,8 +653,8 @@ async function gameLoop(){
           holdStart=null;
           statusEl.className='pill status-wait';
           statusEl.textContent = seq.length>1
-            ? 'ผ่านจังหวะ '+state.covered.size+'/'+seq.length+' — ขยับตามเงาทอง'
-            : 'ปรับท่าให้ตรงกับเงาทอง';
+            ? 'ผ่านจังหวะ '+state.covered.size+'/'+seq.length+' — ขยับตามท่าต้นแบบ'
+            : 'ปรับท่าให้ตรงกับท่าต้นแบบ';
         }
       }
     }
@@ -701,23 +696,18 @@ function drawSkeleton(ctx, pts, color, dashed, allowedNames){
     ctx.beginPath(); ctx.arc(p.x,p.y,5,0,7); ctx.fill();
   });
 }
-// Renders the tracked body as a solid gold "shadow" shape with a red border outline,
-// instead of thin stick-figure lines — easier to see clearly on a phone screen.
+// Fallback ONLY: used if the true silhouette (segmentation) model fails to load on a
+// device/browser. Draws a thick solid-black approximation instead of red+gold.
 function drawBodyShadow(ctx, pts, allowedNames){
   const allowed = n => !allowedNames || allowedNames.includes(n);
   const segments = SKELETON_PAIRS.filter(([a,b]) => allowed(a) && allowed(b) && pts[a] && pts[b]);
-  // pass 1: thick red stroke underneath = the border
   ctx.lineCap='round'; ctx.lineJoin='round';
-  ctx.strokeStyle='rgba(196,46,46,0.95)'; ctx.lineWidth=26;
+  ctx.strokeStyle='rgba(24,19,16,0.92)'; ctx.lineWidth=22;
   segments.forEach(([a,b])=>{ ctx.beginPath(); ctx.moveTo(pts[a].x,pts[a].y); ctx.lineTo(pts[b].x,pts[b].y); ctx.stroke(); });
-  // pass 2: slightly thinner gold stroke on top = the shadow fill
-  ctx.strokeStyle='rgba(212,175,55,0.95)'; ctx.lineWidth=16;
-  segments.forEach(([a,b])=>{ ctx.beginPath(); ctx.moveTo(pts[a].x,pts[a].y); ctx.lineTo(pts[b].x,pts[b].y); ctx.stroke(); });
-  // joints: same red-border-then-gold-fill treatment so corners look continuous
+  ctx.fillStyle='rgba(24,19,16,0.92)';
   Object.entries(pts).forEach(([name,p])=>{
     if(!allowed(name)) return;
-    ctx.fillStyle='rgba(196,46,46,0.95)'; ctx.beginPath(); ctx.arc(p.x,p.y,13,0,7); ctx.fill();
-    ctx.fillStyle='rgba(212,175,55,0.95)'; ctx.beginPath(); ctx.arc(p.x,p.y,8,0,7); ctx.fill();
+    ctx.beginPath(); ctx.arc(p.x,p.y,11,0,7); ctx.fill();
   });
 }
 async function onPoseConfirmed(){
@@ -765,42 +755,39 @@ async function startCalibrateScreen(sel){
 }
 let silhouetteOffscreen=null;
 // Renders the person's real outline (arms/hands/fingers/torso/legs/feet as the camera
-// actually sees them) as a solid gold shadow with a red border — far more detailed than
-// a joint-based stick figure. Returns true if it successfully drew something.
-async function drawSilhouetteFromSegmentation(ctx, video, canvasW, canvasH){
+// actually sees them) as a solid BLACK shadow — this is the "ภาพต้นแบบ" the teacher records
+// and the students later see as their target. Returns true if it successfully drew something.
+async function drawBlackSilhouette(ctx, video, canvasW, canvasH){
   const vw = video.videoWidth, vh = video.videoHeight;
   if(!vw || !vh) return false;
   const segmentation = await segmenter.segmentPeople(video);
   if(!segmentation || !segmentation[0]) return false;
 
-  const goldMask = await bodySegmentation.toBinaryMask(
-    segmentation[0], {r:212,g:175,b:55,a:255}, {r:0,g:0,b:0,a:0}, false, 0.6);
-  const redMask = await bodySegmentation.toBinaryMask(
-    segmentation[0], {r:196,g:46,b:46,a:255}, {r:0,g:0,b:0,a:0}, false, 0.6);
-
-  if(!silhouetteOffscreen) silhouetteOffscreen = document.createElement('canvas');
-  silhouetteOffscreen.width = vw; silhouetteOffscreen.height = vh;
-  const offCtx = silhouetteOffscreen.getContext('2d');
-  offCtx.clearRect(0,0,vw,vh);
-
-  // fake a "grown"/dilated red outline by stamping the red mask at several small offsets —
-  // then the gold fill (drawn un-offset, on top) covers the center and leaves just a red
-  // border showing around the true body edge
-  const redBitmap = await createImageBitmap(redMask);
-  const R = 5;
-  [[-R,0],[R,0],[0,-R],[0,R],[-R,-R],[R,-R],[-R,R],[R,R]].forEach(([dx,dy])=>{
-    offCtx.drawImage(redBitmap, dx, dy);
-  });
-  const goldBitmap = await createImageBitmap(goldMask);
-  offCtx.drawImage(goldBitmap, 0, 0);
+  const blackMask = await bodySegmentation.toBinaryMask(
+    segmentation[0], {r:22,g:18,b:15,a:255}, {r:0,g:0,b:0,a:0}, false, 0.6);
+  const bitmap = await createImageBitmap(blackMask);
 
   // map from the camera's native resolution to the displayed "cover" canvas area
-  // (identical cropping math to toXY, so it lines up with where the live tracking used to be)
+  // (identical cropping math to toXY, so it lines up with where live tracking is drawn)
   const scale = Math.max(canvasW/vw, canvasH/vh);
   const srcW = canvasW/scale, srcH = canvasH/scale;
   const srcX = (vw-srcW)/2, srcY = (vh-srcH)/2;
-  ctx.drawImage(silhouetteOffscreen, srcX, srcY, srcW, srcH, 0, 0, canvasW, canvasH);
+  ctx.drawImage(bitmap, srcX, srcY, srcW, srcH, 0, 0, canvasW, canvasH);
   return true;
+}
+let captureCanvas=null;
+// Grabs a small, storage-friendly copy of whatever is currently on the calibration canvas
+// (the black silhouette), used to build the animated reference the students will see.
+function captureShadowSnapshot(sourceCanvas, maxW=220){
+  const scale = Math.min(1, maxW/sourceCanvas.width);
+  const w = Math.max(1, Math.round(sourceCanvas.width*scale));
+  const h = Math.max(1, Math.round(sourceCanvas.height*scale));
+  if(!captureCanvas) captureCanvas = document.createElement('canvas');
+  captureCanvas.width = w; captureCanvas.height = h;
+  const cctx = captureCanvas.getContext('2d');
+  cctx.clearRect(0,0,w,h);
+  cctx.drawImage(sourceCanvas, 0, 0, w, h);
+  return captureCanvas.toDataURL('image/png');
 }
 async function calLoop(){
   if(!calLoopActive) return;
@@ -817,7 +804,7 @@ async function calLoop(){
 
   let drewSilhouette = false;
   if(segmenterReady && video.readyState>=2){
-    try{ drewSilhouette = await drawSilhouetteFromSegmentation(ctx, video, canvas.width, canvas.height); }
+    try{ drewSilhouette = await drawBlackSilhouette(ctx, video, canvas.width, canvas.height); }
     catch(e){ console.warn('silhouette draw failed this frame, using outline fallback', e); }
   }
   if(!drewSilhouette && lastLiveKeypoints){
@@ -827,8 +814,8 @@ async function calLoop(){
 }
 // Recording: hold the button and perform the movement. We sample frames while held so
 // multi-step movements (ซอยเท้า, เดิน, ไป-มา ฯลฯ) are captured as a short sequence, not one snapshot.
-const MIN_HOLD_MS = 350, MAX_HOLD_MS = 3000, SAMPLE_MS = 120;
-let isRecording=false, saveHoldStart=null, sampleTimer=null, maxCapTimer=null, recordingFrames=[];
+const MIN_HOLD_MS = 350, MAX_HOLD_MS = 3000, SAMPLE_MS = 120, MAX_SHADOW_FRAMES = 8;
+let isRecording=false, saveHoldStart=null, sampleTimer=null, maxCapTimer=null, recordingFrames=[], recordingShadowFrames=[];
 const saveBtn = document.getElementById('save-hold-btn');
 const recIndicator = document.getElementById('cal-rec-indicator');
 
@@ -842,10 +829,18 @@ function startSaveHold(){
   clearRecordingTimers();
   saveHoldStart = Date.now();
   recordingFrames = [];
+  recordingShadowFrames = [];
   saveBtn.textContent='● กำลังอัด...';
   recIndicator.textContent = 'บันทึกแล้ว 0.0s (ปล่อยนิ้วเมื่อทำท่าเสร็จ)';
   sampleTimer = setInterval(()=>{
     if(lastLiveKeypoints) recordingFrames.push(lastLiveKeypoints);
+    // capture the black-silhouette snapshot every other tick, capped, to keep storage small
+    if(recordingShadowFrames.length < MAX_SHADOW_FRAMES && recordingFrames.length % 2 === 1){
+      try{
+        const cv = document.getElementById('cal-overlay');
+        recordingShadowFrames.push(captureShadowSnapshot(cv));
+      }catch(e){ /* if capture fails we still have the keypoints for matching */ }
+    }
     const secs = ((Date.now()-saveHoldStart)/1000).toFixed(1);
     recIndicator.textContent = 'บันทึกแล้ว '+secs+'s (ปล่อยนิ้วเมื่อทำท่าเสร็จ)';
   }, SAMPLE_MS);
@@ -863,7 +858,7 @@ async function finishSaveHold(){
     return;
   }
   try{
-    await saveReference(currentCalibratePose.pose.id, recordingFrames);
+    await saveReference(currentCalibratePose.pose.id, recordingFrames, recordingShadowFrames);
     saveBtn.textContent = recordingFrames.length>3 ? 'บันทึกท่าเคลื่อนไหวแล้ว ✓' : 'บันทึกท่าแล้ว ✓';
     recIndicator.textContent = 'เก็บไว้ '+recordingFrames.length+' จังหวะ';
     setTimeout(()=>{ saveBtn.textContent='กดค้างไว้เพื่ออัดท่า'; goTo('screen-teacher'); }, 800);
