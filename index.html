@@ -264,28 +264,27 @@
   </div>
 </div>
 
-<!-- ============ SCREEN: TEACHER CALIBRATE (single still-photo capture) ============ -->
+<!-- ============ SCREEN: TEACHER CALIBRATE (upload an image file) ============ -->
 <div class="screen" id="screen-calibrate">
   <div class="kbach-frame">
     <div class="c3"></div><div class="c4"></div>
-    <div class="stage-wrap" id="cal-stage-wrap">
-      <div class="zoom-wrap zoom-full" id="cal-zoom-wrap">
-        <video id="cal-video" autoplay playsinline muted></video>
-        <img class="ghost-photo" id="cal-preview-img" alt="ภาพที่ถ่าย">
-      </div>
-      <span class="focus-tag" id="cal-focus-tag">ซูมโฟกัสมือ/เท้า</span>
+    <div class="stage-wrap" id="cal-stage-wrap" style="background:#efe7d8;">
+      <img id="cal-preview-img" alt="ภาพที่เลือก" style="display:none;width:100%;height:100%;object-fit:contain;">
+      <div id="cal-placeholder" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+        color:#8a7c6a;font-size:14px;text-align:center;padding:0 24px;">ยังไม่ได้เลือกไฟล์ภาพ</div>
       <div class="pose-caption"><span class="name" id="cal-pose-name">—</span></div>
     </div>
   </div>
   <div class="btn-row" style="margin-top:18px;" id="cal-btn-row-live">
     <button class="btn btn-ghost" onclick="goTo('screen-teacher')">กลับรายการ</button>
-    <button class="btn btn-teal" id="capture-btn" onclick="capturePhoto()">📷 ถ่ายภาพ</button>
+    <label class="btn btn-teal" for="file-input-el" style="display:inline-block;">📁 เลือกไฟล์ภาพ</label>
+    <input type="file" id="file-input-el" accept="image/*" style="display:none;" onchange="onFileSelected(event)">
   </div>
   <div class="btn-row" style="margin-top:18px;display:none;" id="cal-btn-row-preview">
-    <button class="btn btn-ghost" onclick="retakePhoto()">ถ่ายใหม่</button>
+    <button class="btn btn-ghost" onclick="retakePhoto()">เลือกใหม่</button>
     <button class="btn btn-primary" onclick="confirmPhoto()">ใช้ภาพนี้ ✓</button>
   </div>
-  <p class="note" style="margin-top:10px;" id="cal-hint">จัดท่าให้ตรงตามต้องการ แล้วกด "ถ่ายภาพ" — ระบบจะถ่ายภาพนิ่งเก็บไว้เป็นต้นแบบ</p>
+  <p class="note" style="margin-top:10px;" id="cal-hint">เลือกไฟล์ภาพจากเครื่องคอมพิวเตอร์หรือมือถือ ระบบจะตัดเป็นเงาสีดำให้อัตโนมัติ</p>
 </div>
 
 <script>
@@ -444,10 +443,8 @@ async function startCamera(videoEl){
   return stream;
 }
 function stopAllCameras(){
-  ['video','cal-video'].forEach(id=>{
-    const v = document.getElementById(id);
-    if(v && v.srcObject){ v.srcObject.getTracks().forEach(t=>t.stop()); v.srcObject=null; }
-  });
+  const v = document.getElementById('video');
+  if(v && v.srcObject){ v.srcObject.getTracks().forEach(t=>t.stop()); v.srcObject=null; }
   gameTimerActive=false;
   gameLoopActive=false;
   stopBackgroundMusic();
@@ -845,71 +842,78 @@ async function segmentToBlackSilhouetteCanvas(source, srcW, srcH, outW, outH){
 }
 
 /* =====================================================================
-   TEACHER CALIBRATION — one still photo per pose, converted into a clean
-   black silhouette automatically. Tap to capture, preview it, then
-   confirm or retake.
+   TEACHER CALIBRATION — upload an image file per pose instead of using
+   the camera. If the silhouette model is available, the uploaded image
+   still gets automatically cut into a clean black shape (same as before);
+   if not, the uploaded file is used as-is. Preview before confirming.
    ===================================================================== */
 let currentCalibratePose=null;
 let capturedPhotoDataURL=null;
 
 async function startCalibrateScreen(){
   document.getElementById('cal-pose-name').textContent = currentCalibratePose.name;
-  applyZoomClass(document.getElementById('cal-zoom-wrap'), document.getElementById('cal-focus-tag'), currentCalibratePose.focus);
-  document.getElementById('cal-preview-img').classList.remove('show');
-  document.getElementById('cal-btn-row-live').style.display='flex';
-  document.getElementById('cal-btn-row-preview').style.display='none';
-  document.getElementById('capture-btn').disabled = true;
+  retakePhoto(); // reset to the empty "no file chosen yet" state
   document.getElementById('cal-hint').textContent = 'กำลังเตรียมระบบตัดเงา รอสักครู่...';
-  const video = document.getElementById('cal-video');
-  video.style.display='block';
-  try{ await startCamera(video); }
-  catch(e){ document.getElementById('cal-hint').textContent = 'เปิดกล้องไม่ได้ ตรวจสอบว่าอนุญาตสิทธิ์กล้องแล้ว'; return; }
   await ensureSegmenter();
-  document.getElementById('capture-btn').disabled = false;
   document.getElementById('cal-hint').textContent = segmenterFailed
-    ? 'ระบบตัดเงาโหลดไม่สำเร็จ — จะบันทึกเป็นภาพถ่ายปกติแทน'
-    : 'จัดท่าให้ตรงตามต้องการ แล้วกด "ถ่ายภาพ" — ระบบจะตัดเป็นเงาสีดำให้อัตโนมัติ';
+    ? 'ระบบตัดเงาไม่พร้อมใช้งาน — จะใช้ภาพที่อัปโหลดตรงๆ แทน'
+    : 'เลือกไฟล์ภาพจากเครื่องคอมพิวเตอร์หรือมือถือ ระบบจะตัดเป็นเงาสีดำให้อัตโนมัติ';
 }
-async function capturePhoto(){
-  const video = document.getElementById('cal-video');
-  if(!video.videoWidth){ document.getElementById('cal-hint').textContent = 'กล้องยังไม่พร้อม ลองอีกครั้งสักครู่'; return; }
-  document.getElementById('capture-btn').disabled = true;
-  document.getElementById('cal-hint').textContent = 'กำลังตัดเงา...';
+// Runs the uploaded image through the silhouette model if available, otherwise just
+// resizes it and uses it as-is (still works with the same hand-level detection either way).
+async function processUploadedImage(imgEl){
   const maxW = 480;
-  const scale = Math.min(1, maxW/video.videoWidth);
-  const outW = Math.round(video.videoWidth*scale), outH = Math.round(video.videoHeight*scale);
-
-  let cv;
-  try{
-    if(segmenterReady){
-      cv = await segmentToBlackSilhouetteCanvas(video, video.videoWidth, video.videoHeight, outW, outH);
-    }
-  }catch(e){ console.warn('segmentation capture failed, falling back to plain photo', e); }
-
+  const scale = Math.min(1, maxW/imgEl.naturalWidth);
+  const outW = Math.round(imgEl.naturalWidth*scale), outH = Math.round(imgEl.naturalHeight*scale);
+  let cv = null;
+  if(segmenterReady){
+    try{ cv = await segmentToBlackSilhouetteCanvas(imgEl, imgEl.naturalWidth, imgEl.naturalHeight, outW, outH); }
+    catch(e){ console.warn('segmentation on uploaded image failed, using it as-is', e); }
+  }
   if(!cv){
-    // fallback: plain photo (no silhouette model available)
     cv = document.createElement('canvas');
     cv.width = outW; cv.height = outH;
-    cv.getContext('2d').drawImage(video, 0, 0, outW, outH);
+    cv.getContext('2d').drawImage(imgEl, 0, 0, outW, outH);
   }
-  capturedPhotoDataURL = cv.toDataURL('image/png');
-  document.getElementById('capture-btn').disabled = false;
-
-  const previewImg = document.getElementById('cal-preview-img');
-  previewImg.src = capturedPhotoDataURL;
-  previewImg.classList.add('show');
-  document.getElementById('cal-video').style.display='none';
-  document.getElementById('cal-btn-row-live').style.display='none';
-  document.getElementById('cal-btn-row-preview').style.display='flex';
-  document.getElementById('cal-hint').textContent = 'พอใจกับภาพนี้ไหม? กด "ใช้ภาพนี้" เพื่อบันทึก หรือ "ถ่ายใหม่" เพื่อลองอีกครั้ง';
+  return cv.toDataURL('image/png');
+}
+function onFileSelected(evt){
+  const file = evt.target.files && evt.target.files[0];
+  if(!file) return;
+  document.getElementById('cal-hint').textContent = 'กำลังประมวลผลภาพ...';
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    const img = new Image();
+    img.onload = async ()=>{
+      try{
+        capturedPhotoDataURL = await processUploadedImage(img);
+        const previewImg = document.getElementById('cal-preview-img');
+        previewImg.src = capturedPhotoDataURL;
+        previewImg.style.display = 'block';
+        document.getElementById('cal-placeholder').style.display = 'none';
+        document.getElementById('cal-btn-row-live').style.display = 'none';
+        document.getElementById('cal-btn-row-preview').style.display = 'flex';
+        document.getElementById('cal-hint').textContent = segmenterReady
+          ? 'ตัดเป็นเงาสีดำให้แล้ว พอใจกับภาพนี้ไหม? กด "ใช้ภาพนี้" หรือ "เลือกใหม่"'
+          : 'ใช้ภาพตามที่อัปโหลด พอใจกับภาพนี้ไหม? กด "ใช้ภาพนี้" หรือ "เลือกใหม่"';
+      }catch(err){
+        console.error('process uploaded image failed', err);
+        document.getElementById('cal-hint').textContent = 'ประมวลผลภาพไม่สำเร็จ ลองเลือกไฟล์อื่น';
+      }
+    };
+    img.onerror = ()=>{ document.getElementById('cal-hint').textContent = 'เปิดไฟล์นี้ไม่ได้ ลองเลือกไฟล์รูปภาพอื่น'; };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
 }
 function retakePhoto(){
   capturedPhotoDataURL = null;
-  document.getElementById('cal-preview-img').classList.remove('show');
-  document.getElementById('cal-video').style.display='block';
-  document.getElementById('cal-btn-row-live').style.display='flex';
-  document.getElementById('cal-btn-row-preview').style.display='none';
-  document.getElementById('cal-hint').textContent = 'จัดท่าให้ตรงตามต้องการ แล้วกด "ถ่ายภาพ" — ระบบจะตัดเป็นเงาสีดำให้อัตโนมัติ';
+  document.getElementById('cal-preview-img').style.display = 'none';
+  document.getElementById('cal-placeholder').style.display = 'flex';
+  document.getElementById('file-input-el').value = '';
+  document.getElementById('cal-btn-row-live').style.display = 'flex';
+  document.getElementById('cal-btn-row-preview').style.display = 'none';
+  document.getElementById('cal-hint').textContent = 'เลือกไฟล์ภาพจากเครื่องคอมพิวเตอร์หรือมือถือ ระบบจะตัดเป็นเงาสีดำให้อัตโนมัติ';
 }
 async function confirmPhoto(){
   if(!capturedPhotoDataURL) return;
