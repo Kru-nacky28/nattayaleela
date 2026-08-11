@@ -3,220 +3,420 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>นาฏยศัพท์ส่วนมือ — เกมตรวจจับท่าทาง</title>
+<title>นาฏยศัพท์ส่วนมือ — ระบบเรียนรู้ตามแนวคิดของซิมพ์ซันร่วมกับ AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Chonburi&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
 <style>
-:root{
-  --maroon:#7A1F2B;
-  --maroon-dark:#551520;
-  --gold:#C9932E;
-  --gold-light:#E8C77A;
-  --teal:#0E5C56;
-  --cream:#FBF3E4;
-  --ink:#241512;
-  --paper:#FFFCF6;
-  --ok:#2F8F5B;
-  --warn:#C64B3B;
-  --radius:18px;
-  --shadow: 0 10px 30px rgba(36,21,18,0.18);
+:root {
+  --maroon: #7A1F2B;
+  --maroon-dark: #4A101A;
+  --gold: #C9932E;
+  --gold-light: #F3E5AB;
+  --gold-hover: #e5a735;
+  --teal: #0E5C56;
+  --teal-light: #16857C;
+  --cream: #FDF9F0;
+  --paper: #FFFFFF;
+  --ink: #241512;
+  --gray-sub: #665752;
+  --ok: #2F8F5B;
+  --warn: #C64B3B;
+  --radius: 16px;
+  --shadow: 0 10px 30px rgba(36,21,18,0.12);
+  --shadow-lg: 0 16px 40px rgba(36,21,18,0.2);
 }
-*{box-sizing:border-box;}
-body{margin:0;}
-html,body{
-  min-height:100vh;
-  font-family:'Sarabun',sans-serif;
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+html, body {
+  min-height: 100vh;
+  font-family: 'Sarabun', sans-serif;
   background:
-    radial-gradient(circle at 10% -10%, rgba(201,147,46,0.20), transparent 45%),
-    radial-gradient(circle at 100% 0%, rgba(14,92,86,0.18), transparent 40%),
+    radial-gradient(circle at 10% -10%, rgba(201,147,46,0.18), transparent 45%),
+    radial-gradient(circle at 100% 0%, rgba(14,92,86,0.15), transparent 40%),
     var(--cream);
-  color:var(--ink);
+  color: var(--ink);
 }
-h1,h2,h3,.display{font-family:'Chonburi',cursive; font-weight:400; letter-spacing:.5px;}
-.app{max-width:1100px; margin:0 auto; padding:20px 18px 60px;}
-.screen{display:none; animation: fadein .35s ease;}
-.screen.active{display:block;}
-@keyframes fadein{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;}}
+
+h1, h2, h3, .display { font-family: 'Chonburi', cursive; font-weight: 400; letter-spacing: 0.5px; }
+.app { max-width: 1100px; margin: 0 auto; padding: 20px 18px 60px; }
+.screen { display: none; animation: fadein 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+.screen.active { display: block; }
+@keyframes fadein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 /* --- kranok flourish divider --- */
-.flourish{display:flex; align-items:center; gap:10px; margin:10px 0 22px; color:var(--gold);}
-.flourish svg{flex:0 0 auto;}
-.flourish .line{flex:1; height:2px; background:linear-gradient(90deg, transparent, var(--gold), transparent);}
+.flourish { display: flex; align-items: center; gap: 12px; margin: 16px 0 24px; color: var(--gold); }
+.flourish svg { flex: 0 0 auto; }
+.flourish .line { flex: 1; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
 
-.topbar{display:flex; align-items:center; justify-content:space-between; padding:18px 4px 6px;}
-.brand{display:flex; align-items:center; gap:12px;}
-.brand .mark{width:44px; height:44px; border-radius:50%; background:conic-gradient(from 200deg, var(--maroon), var(--gold), var(--teal), var(--maroon)); box-shadow:var(--shadow); position:relative;}
-.brand .mark::after{content:"";position:absolute; inset:6px; background:var(--paper); border-radius:50%;}
-.brand h1{font-size:20px; margin:0; color:var(--maroon-dark);}
-.brand span{display:block; font-size:12px; color:var(--teal); letter-spacing:1px;}
-.navbtn{border:1px solid var(--maroon); background:transparent; color:var(--maroon); padding:8px 14px; border-radius:999px; font-family:'Sarabun'; cursor:pointer; font-size:13px;}
-.navbtn:hover{background:var(--maroon); color:#fff;}
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 4px 18px; border-bottom: 1px solid rgba(201,147,46,0.25); }
+.brand { display: flex; align-items: center; gap: 14px; }
+.brand .mark {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: conic-gradient(from 200deg, var(--maroon), var(--gold), var(--teal), var(--maroon));
+  box-shadow: var(--shadow); position: relative; flex-shrink: 0;
+}
+.brand .mark::after { content: ""; position: absolute; inset: 6px; background: var(--paper); border-radius: 50%; }
+.brand h1 { font-size: 20px; margin: 0; color: var(--maroon-dark); line-height: 1.2; }
+.brand span { display: block; font-size: 11px; color: var(--teal); letter-spacing: 1px; font-weight: 600; }
+.navbtn {
+  border: 1px solid var(--maroon); background: transparent; color: var(--maroon);
+  padding: 8px 16px; border-radius: 999px; font-family: 'Sarabun'; cursor: pointer; font-size: 13px; font-weight: 600;
+  transition: all 0.2s;
+}
+.navbtn:hover { background: var(--maroon); color: #fff; }
 
-/* home hero */
-.hero{text-align:center; padding:36px 10px 10px;}
-.hero h2{font-size:clamp(28px,5vw,44px); color:var(--maroon-dark); margin:0 0 6px;}
-.hero p{color:#5b473f; max-width:560px; margin:0 auto 30px; font-size:15px;}
-.role-grid{display:grid; grid-template-columns:1fr 1fr; gap:20px; max-width:640px; margin:0 auto;}
-@media (max-width:560px){.role-grid{grid-template-columns:1fr;}}
-.role-card{background:var(--paper); border-radius:var(--radius); padding:26px 20px; box-shadow:var(--shadow); cursor:pointer; border:2px solid transparent; transition:.2s; text-align:left;}
-.role-card:hover{border-color:var(--gold); transform:translateY(-3px);}
-.role-card .icon{font-size:34px;}
-.role-card h3{margin:10px 0 4px; color:var(--maroon-dark);}
-.role-card p{margin:0; font-size:13px; color:#6b574d;}
+/* Home Hero */
+.hero { text-align: center; padding: 30px 10px 10px; }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 6px; background: rgba(14,92,86,0.1);
+  color: var(--teal); padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; margin-bottom: 12px;
+}
+.hero h2 { font-size: clamp(26px, 4.5vw, 42px); color: var(--maroon-dark); margin: 0 0 10px; line-height: 1.25; }
+.hero p { color: var(--gray-sub); max-width: 680px; margin: 0 auto 28px; font-size: 15px; line-height: 1.6; }
+.role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 720px; margin: 0 auto; }
+@media (max-width: 600px) { .role-grid { grid-template-columns: 1fr; } }
 
-/* pose grid (teacher) */
-.pose-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:16px; margin-top:14px;}
-.pose-card{background:var(--paper); border-radius:14px; overflow:hidden; box-shadow:var(--shadow); cursor:pointer; border:2px solid transparent;}
-.pose-card:hover{border-color:var(--gold);}
-.pose-thumb{width:100%; aspect-ratio:4/3; background:#fff repeating-linear-gradient(45deg,#f4ede0,#f4ede0 10px,#efe3cf 10px,#efe3cf 20px); display:flex; align-items:center; justify-content:center; color:#b7a894; font-size:12px;}
-.pose-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
-.pose-meta{padding:10px 12px;}
-.pose-meta .num{font-size:11px; color:var(--gold); letter-spacing:1px;}
-.pose-meta h4{margin:2px 0 6px; font-size:14px; color:var(--ink);}
-.tag{display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px;}
-.tag.done{background:#e4f4ea; color:var(--ok);}
-.tag.todo{background:#f6e6d8; color:var(--maroon);}
+.role-card {
+  background: var(--paper); border-radius: var(--radius); padding: 28px 24px; box-shadow: var(--shadow);
+  cursor: pointer; border: 2px solid transparent; transition: all 0.25s ease; text-align: left; position: relative; overflow: hidden;
+}
+.role-card:hover { border-color: var(--gold); transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+.role-card .icon { font-size: 38px; margin-bottom: 10px; display: block; }
+.role-card h3 { margin: 0 0 6px; color: var(--maroon-dark); font-size: 20px; }
+.role-card p { margin: 0; font-size: 13px; color: var(--gray-sub); line-height: 1.5; }
+.role-card .badge-action {
+  margin-top: 14px; display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: var(--teal);
+}
 
-/* camera stage */
-.stage-wrap{display:flex; gap:24px; flex-wrap:wrap; margin-top:10px;}
-.camera-box{position:relative; width:100%; max-width:480px; aspect-ratio:4/3; border-radius:var(--radius); overflow:hidden; background:#111; box-shadow:var(--shadow); border:3px solid var(--gold);}
-.camera-box video{width:100%; height:100%; object-fit:cover; transform:scaleX(-1); display:block;}
-.overlay-img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.42; pointer-events:none; mix-blend-mode:multiply;}
-.status-pill{position:absolute; top:10px; left:10px; background:rgba(0,0,0,.55); color:#fff; padding:6px 12px; border-radius:999px; font-size:12px; display:flex; align-items:center; gap:6px;}
-.dot{width:8px; height:8px; border-radius:50%; background:var(--warn);}
-.dot.ready{background:var(--ok);}
-.side-panel{flex:1; min-width:240px;}
-.btn{font-family:'Sarabun'; font-weight:600; border:none; border-radius:12px; padding:12px 20px; cursor:pointer; font-size:14px; transition:.15s;}
-.btn-primary{background:var(--maroon); color:#fff;}
-.btn-primary:hover{background:var(--maroon-dark);}
-.btn-gold{background:var(--gold); color:#3a2a08;}
-.btn-gold:hover{background:var(--gold-light);}
-.btn-ghost{background:transparent; border:1px solid #c8b8a4; color:var(--ink);}
-.btn:disabled{opacity:.45; cursor:not-allowed;}
-.row{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;}
+.simpson-info {
+  margin: 36px auto 0; max-width: 840px; background: rgba(255,255,255,0.7); border: 1px solid rgba(201,147,46,0.3);
+  border-radius: var(--radius); padding: 18px 22px; text-align: left; font-size: 13px; color: #4a3e39;
+}
+.simpson-info h4 { margin: 0 0 8px; color: var(--maroon-dark); font-family: 'Chonburi'; font-size: 15px; }
+.simpson-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
+.s-step { background: #fff; padding: 8px 12px; border-radius: 8px; border-left: 3px solid var(--gold); }
+.s-step strong { display: block; color: var(--maroon); font-size: 12px; }
 
-/* student login */
-.login-card{max-width:420px; margin:30px auto; background:var(--paper); padding:30px; border-radius:var(--radius); box-shadow:var(--shadow); text-align:center;}
-.login-card input{width:100%; padding:12px 14px; border-radius:10px; border:1px solid #d9c9b3; font-family:'Sarabun'; font-size:15px; margin:14px 0;}
+/* Buttons */
+.btn {
+  font-family: 'Sarabun'; font-weight: 600; border: none; border-radius: 12px; padding: 11px 22px;
+  cursor: pointer; font-size: 14px; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-primary { background: var(--maroon); color: #fff; }
+.btn-primary:hover { background: var(--maroon-dark); transform: translateY(-1px); }
+.btn-gold { background: var(--gold); color: #2d1d03; font-weight: 700; }
+.btn-gold:hover { background: var(--gold-hover); transform: translateY(-1px); }
+.btn-teal { background: var(--teal); color: #fff; }
+.btn-teal:hover { background: var(--teal-light); transform: translateY(-1px); }
+.btn-ghost { background: transparent; border: 1px solid #c8b8a4; color: var(--ink); }
+.btn-ghost:hover { background: rgba(0,0,0,0.04); }
+.btn-danger { background: var(--warn); color: #fff; }
+.btn-danger:hover { background: #aa392a; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
 
-/* game screen */
-.game-top{display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap;}
-.timerbox{font-family:'Chonburi'; font-size:30px; color:var(--maroon-dark); background:var(--paper); padding:8px 18px; border-radius:12px; box-shadow:var(--shadow); border:2px solid var(--gold);}
-.timerbox.low{color:var(--warn); border-color:var(--warn); animation:pulse 1s infinite;}
-@keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.06);}}
-.progress-dots{display:flex; gap:6px; flex-wrap:wrap;}
-.pdot{width:26px; height:26px; border-radius:50%; background:#eadfce; display:flex; align-items:center; justify-content:center; font-size:12px; color:#8a7864; border:2px solid transparent;}
-.pdot.current{border-color:var(--gold);}
-.pdot.correct{background:var(--ok); color:#fff;}
-.pdot.skipped{background:#f0d8b0; color:var(--maroon);}
+/* Pose Grid (Teacher) */
+.pose-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; margin-top: 16px; }
+.pose-card {
+  background: var(--paper); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow);
+  border: 2px solid transparent; transition: all 0.2s; display: flex; flex-direction: column;
+}
+.pose-card:hover { border-color: var(--gold); transform: translateY(-2px); }
+.pose-thumb {
+  width: 100%; aspect-ratio: 4/3; background: #f5eedf repeating-linear-gradient(45deg,#f4ede0,#f4ede0 10px,#efe3cf 10px,#efe3cf 20px);
+  display: flex; align-items: center; justify-content: center; color: #a3937f; font-size: 13px; position: relative; overflow: hidden;
+}
+.pose-thumb img { width: 100%; height: 100%; object-fit: contain; background: #faf5ec; display: block; }
+.pose-meta { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+.pose-meta .num { font-size: 11px; color: var(--gold); font-weight: 700; letter-spacing: 1px; }
+.pose-meta h4 { margin: 2px 0 8px; font-size: 16px; color: var(--ink); }
+.pose-card-actions { display: flex; gap: 8px; margin-top: 10px; }
+.tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; width: fit-content; }
+.tag.done { background: #e4f4ea; color: var(--ok); }
+.tag.todo { background: #f6e6d8; color: var(--maroon); }
 
-.pose-current{text-align:center; margin:18px 0 8px;}
-.pose-current .num{color:var(--gold); font-size:13px; letter-spacing:2px;}
-.pose-current h2{margin:2px 0; font-size:30px; color:var(--maroon-dark);}
-.match-fill{height:10px; border-radius:999px; background:#eee0c8; overflow:hidden; max-width:480px; margin:10px auto;}
-.match-fill i{display:block; height:100%; background:linear-gradient(90deg,var(--gold),var(--teal)); width:0%; transition:width .12s;}
+/* Uploader Drop Zone & Modal */
+.upload-box {
+  border: 2px dashed var(--gold); background: #fffcf5; border-radius: var(--radius); padding: 24px; text-align: center;
+  cursor: pointer; transition: all 0.2s; margin-top: 12px;
+}
+.upload-box:hover, .upload-box.dragover { background: #f7eed8; border-color: var(--maroon); }
+.upload-box .up-icon { font-size: 36px; color: var(--gold); margin-bottom: 6px; display: block; }
+.upload-box p { margin: 4px 0; font-size: 14px; color: var(--ink); }
+.upload-box span { font-size: 12px; color: var(--gray-sub); }
 
-.checkmark{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;}
-.checkmark svg{width:120px; height:120px; opacity:0; transform:scale(.6);}
-.checkmark.show svg{opacity:1; transform:scale(1); transition:.25s cubic-bezier(.2,1.4,.4,1);}
+.preview-stage {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; background: #faf5eb; padding: 16px; border-radius: 12px;
+}
+@media (max-width: 640px) { .preview-stage { grid-template-columns: 1fr; } }
+.preview-box { text-align: center; }
+.preview-box h5 { margin: 0 0 6px; font-size: 13px; color: var(--maroon-dark); }
+.preview-box img, .preview-box canvas {
+  width: 100%; max-height: 260px; object-fit: contain; background: #fff; border-radius: 10px; border: 1px solid #e2d5c3; box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
 
-.result-card{max-width:480px; margin:30px auto; background:var(--paper); padding:36px 28px; border-radius:var(--radius); box-shadow:var(--shadow); text-align:center;}
-.result-card .score{font-family:'Chonburi'; font-size:56px; color:var(--maroon-dark);}
-.result-card .sub{color:#6b574d; margin-bottom:20px;}
+/* Bulk Upload Bar */
+.bulk-bar {
+  background: var(--paper); border: 2px dashed var(--teal); border-radius: var(--radius); padding: 18px 20px;
+  margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: var(--shadow);
+}
+.bulk-info h3 { margin: 0 0 4px; font-size: 16px; color: var(--teal); }
+.bulk-info p { margin: 0; font-size: 13px; color: var(--gray-sub); }
 
-/* dashboard */
-.student-list{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-top:14px;}
-.student-item{background:var(--paper); padding:14px 16px; border-radius:12px; box-shadow:var(--shadow); cursor:pointer; border:2px solid transparent;}
-.student-item:hover{border-color:var(--gold);}
-.student-item h4{margin:0 0 4px; color:var(--maroon-dark);}
-.student-item span{font-size:12px; color:#8a7864;}
-table.hist{width:100%; border-collapse:collapse; margin-top:16px; background:var(--paper); border-radius:12px; overflow:hidden; box-shadow:var(--shadow);}
-table.hist th, table.hist td{padding:10px 12px; text-align:left; font-size:13px; border-bottom:1px solid #eee0c8;}
-table.hist th{background:var(--maroon); color:#fff; font-weight:600;}
-.bar-track{background:#eee0c8; border-radius:6px; height:8px; width:120px; overflow:hidden;}
-.bar-fill{height:100%; background:var(--teal);}
-.hint{font-size:12px; color:#8a7864; margin-top:6px;}
-.small-note{font-size:12px; color:#8a7864; text-align:center; margin-top:24px;}
+/* Camera Stage (Student & Teacher Optional) */
+.stage-wrap { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 14px; align-items: flex-start; }
+.camera-box {
+  position: relative; width: 100%; max-width: 540px; aspect-ratio: 4/3; border-radius: var(--radius);
+  overflow: hidden; background: #111; box-shadow: var(--shadow-lg); border: 3px solid var(--gold); flex-shrink: 0;
+}
+.camera-box video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
+
+/* Overlay Image Options */
+.overlay-img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none;
+  opacity: 0.55; transition: opacity 0.15s;
+}
+.overlay-img.mode-silhouette { mix-blend-mode: multiply; }
+.overlay-img.mode-original { mix-blend-mode: normal; filter: drop-shadow(0 0 8px rgba(0,0,0,0.5)); }
+
+.status-pill {
+  position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+  color: #fff; padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 8px; z-index: 5;
+}
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--warn); display: inline-block; }
+.dot.ready { background: #34d399; box-shadow: 0 0 8px #34d399; }
+
+.side-panel { flex: 1; min-width: 260px; background: var(--paper); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+
+/* Student Login */
+.login-card {
+  max-width: 440px; margin: 30px auto; background: var(--paper); padding: 36px 30px; border-radius: var(--radius);
+  box-shadow: var(--shadow-lg); text-align: center; border: 1px solid rgba(201,147,46,0.3);
+}
+.login-card input {
+  width: 100%; padding: 13px 16px; border-radius: 12px; border: 1px solid #d9c9b3; font-family: 'Sarabun'; font-size: 15px; margin: 16px 0; outline: none; transition: border-color 0.2s;
+}
+.login-card input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,147,46,0.2); }
+
+/* Game Controls & Progress */
+.game-top { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+.timerbox {
+  font-family: 'Chonburi'; font-size: 32px; color: var(--maroon-dark); background: var(--paper); padding: 6px 20px;
+  border-radius: 14px; box-shadow: var(--shadow); border: 2px solid var(--gold); display: flex; align-items: center; gap: 8px;
+}
+.timerbox.low { color: var(--warn); border-color: var(--warn); animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+.progress-dots { display: flex; gap: 8px; flex-wrap: wrap; }
+.pdot {
+  width: 32px; height: 32px; border-radius: 50%; background: #eadfce; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #8a7864; border: 2px solid transparent; transition: all 0.2s;
+}
+.pdot.current { border-color: var(--gold); transform: scale(1.15); box-shadow: 0 0 10px rgba(201,147,46,0.5); }
+.pdot.correct { background: var(--ok); color: #fff; }
+.pdot.skipped { background: #f0d8b0; color: var(--maroon); }
+
+.pose-current { text-align: center; margin: 12px 0 16px; }
+.pose-current .num { color: var(--gold); font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+.pose-current h2 { margin: 2px 0; font-size: 32px; color: var(--maroon-dark); }
+
+.overlay-controls {
+  background: var(--paper); padding: 12px 18px; border-radius: 14px; box-shadow: var(--shadow); margin-top: 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+.overlay-controls label { font-size: 13px; font-weight: 600; color: var(--maroon-dark); display: flex; align-items: center; gap: 8px; }
+.overlay-controls input[type="range"] { accent-color: var(--gold); width: 120px; cursor: pointer; }
+
+.match-fill { height: 12px; border-radius: 999px; background: #eee0c8; overflow: hidden; max-width: 540px; margin: 14px auto; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+.match-fill i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--teal)); width: 0%; transition: width 0.12s ease-out; }
+
+.checkmark { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 10; }
+.checkmark svg { width: 130px; height: 130px; opacity: 0; transform: scale(0.5); }
+.checkmark.show svg { opacity: 1; transform: scale(1); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+/* Result Card */
+.result-card {
+  max-width: 520px; margin: 30px auto; background: var(--paper); padding: 40px 32px; border-radius: var(--radius);
+  box-shadow: var(--shadow-lg); text-align: center; border: 2px solid var(--gold);
+}
+.result-card .score { font-family: 'Chonburi'; font-size: 64px; color: var(--maroon-dark); margin: 10px 0; }
+.result-card .sub { color: var(--gray-sub); font-size: 16px; margin-bottom: 24px; }
+
+/* Dashboard */
+.student-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 16px; }
+.student-item {
+  background: var(--paper); padding: 16px 18px; border-radius: 14px; box-shadow: var(--shadow); cursor: pointer;
+  border: 2px solid transparent; transition: all 0.2s;
+}
+.student-item:hover { border-color: var(--gold); transform: translateY(-2px); }
+.student-item h4 { margin: 0 0 6px; color: var(--maroon-dark); font-size: 16px; }
+.student-item span { font-size: 13px; color: var(--gray-sub); display: block; }
+
+table.hist { width: 100%; border-collapse: collapse; margin-top: 18px; background: var(--paper); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
+table.hist th, table.hist td { padding: 12px 16px; text-align: left; font-size: 14px; border-bottom: 1px solid #eee0c8; }
+table.hist th { background: var(--maroon); color: #fff; font-weight: 600; font-family: 'Chonburi'; font-size: 13px; }
+.bar-track { background: #eee0c8; border-radius: 6px; height: 10px; width: 120px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--teal); }
+.hint { font-size: 13px; color: var(--gray-sub); margin-top: 6px; line-height: 1.5; }
+.small-note { font-size: 12px; color: #8a7864; text-align: center; margin-top: 28px; }
+
+/* Modal Edit Single Pose */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(20,10,8,0.65); backdrop-filter: blur(4px); display: none;
+  align-items: center; justify-content: center; z-index: 100; padding: 16px; animation: fadein 0.2s ease;
+}
+.modal-backdrop.active { display: flex; }
+.modal-card {
+  background: var(--paper); max-width: 680px; width: 100%; max-height: 90vh; overflow-y: auto;
+  border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow-lg); border: 2px solid var(--gold); position: relative;
+}
+.modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--gray-sub); }
 </style>
 </head>
 <body>
 <div class="app">
 
+  <!-- TOPBAR -->
   <div class="topbar">
     <div class="brand">
       <div class="mark"></div>
       <div>
-        <h1>นาฏยศัพท์ส่วนมือ</h1>
-        <span>AI GESTURE PRACTICE</span>
+        <h1>นาฏยศัพท์ส่วนมือ (ม.1)</h1>
+        <span>SIMPSON taxonomy × AI GESTURE LEARNING</span>
       </div>
     </div>
-    <button class="navbtn" id="btnHome">หน้าหลัก</button>
+    <button class="navbtn" id="btnHome">🏠 หน้าหลัก</button>
   </div>
 
-  <!-- HOME -->
+  <!-- HOME SCREEN -->
   <div class="screen active" id="screen-home">
     <div class="hero">
-      <h2>ตั้งวง จีบ ให้ตรงเงา</h2>
-      <p>เกมฝึกนาฏยศัพท์ส่วนมือด้วยกล้อง AI จัดร่างกายให้ทับภาพเงาต้นฉบับของครู ให้ตรงระดับนิ้ว มือ และแขน</p>
+      <div class="hero-badge">✨ สื่อการเรียนรู้สำหรับยื่นขอเลื่อนวิทยฐานะ คศ.3 (วPA)</div>
+      <h2>การพัฒนาทักษะการปฏิบัตินาฏยศัพท์ด้วย AI</h2>
+      <p>นวัตกรรมจัดการเรียนรู้ตามแนวคิดของซิมพ์ซัน (Simpson's Psychomotor Domain) ร่วมกับเกมตรวจจับท่าทางปัญญาประดิษฐ์ เพื่อยกระดับทักษะปฏิบัตินาฏศิลป์ไทยของนักเรียนชั้นมัธยมศึกษาปีที่ 1</p>
     </div>
-    <div class="flourish"><div class="line"></div>
+    
+    <div class="flourish">
+      <div class="line"></div>
       <svg width="26" height="26" viewBox="0 0 26 26"><path d="M13 2 C 16 8, 24 8, 22 13 C 24 18, 16 18, 13 24 C 10 18, 2 18, 4 13 C 2 8, 10 8, 13 2 Z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
       <div class="line"></div>
     </div>
+
     <div class="role-grid">
       <div class="role-card" id="cardTeacher">
-        <div class="icon">🪷</div>
-        <h3>สำหรับครู</h3>
-        <p>บันทึกภาพเงาต้นฉบับ 8 ท่า และดูผลพัฒนาการของนักเรียน</p>
+        <span class="icon">🪷</span>
+        <h3>เมนูสำหรับครูผู้สอน</h3>
+        <p>อัปโหลดภาพต้นฉบับนาฏยศัพท์ 8 ท่า (ภาพถ่ายขนาดจริง), ปรับแต่งค่าอ้างอิง AI และดูรายงานพัฒนาการนักเรียน</p>
+        <div class="badge-action">จัดการภาพต้นฉบับ & Dashboard →</div>
       </div>
       <div class="role-card" id="cardStudent">
-        <div class="icon">💃</div>
-        <h3>สำหรับนักเรียน</h3>
-        <p>เข้าสู่เกม จัดท่าทางให้ตรงกับภาพเงา แข่งกับเวลา 180 วินาที</p>
+        <span class="icon">💃</span>
+        <h3>เมนูสำหรับนักเรียน</h3>
+        <p>เข้าสู่เกมฝึกปฏิบัติทักษะท่าทาง ให้ตรงกับภาพเงาและภาพต้นฉบับของครู แข่งขันกับเวลา 180 วินาที</p>
+        <div class="badge-action">เข้าสู่บทเรียนและเกม AI →</div>
       </div>
     </div>
-    <p class="small-note">ข้อมูลคะแนนของนักเรียนจะถูกบันทึกแบบส่วนกลาง (shared) เพื่อให้ครูดูภาพรวมของทุกคนได้</p>
+
+    <div class="simpson-info">
+      <h4>📌 กรอบแนวคิดการจัดการเรียนรู้ตามแนวคิดของซิมพ์ซัน (Simpson) ที่ใช้ในแอปพลิเคชันนี้:</h4>
+      <div class="simpson-steps">
+        <div class="s-step"><strong>1. Perception (การรับรู้)</strong>สังเกตภาพต้นฉบับขนาดจริงและเงาแนวท่าของครู</div>
+        <div class="s-step"><strong>2. Set (ความพร้อม)</strong>เตรียมจัดวางร่างกายและส่วนมือให้พร้อมก่อนเริ่มจับเวลา</div>
+        <div class="s-step"><strong>3. Guided Response</strong>ฝึกปฏิบัติตามโดยมี AI คอยชี้แนะเปอร์เซ็นต์ความแม่นยำ</div>
+        <div class="s-step"><strong>4. Mechanism (กลไก)</strong>ค้างท่าทางให้ตรงตามเวลา (Hold Frames) สร้างความชิน muscle memory</div>
+      </div>
+    </div>
+    
+    <p class="small-note">ข้อมูลภาพต้นฉบับและคะแนนของนักเรียนจะถูกบันทึกในอุปกรณ์ (Local Storage) และซิงค์อัตโนมัติ</p>
   </div>
 
-  <!-- TEACHER: pose list -->
+  <!-- TEACHER SCREEN: POSE MANAGEMENT -->
   <div class="screen" id="screen-teacher">
-    <h2 style="color:var(--maroon-dark)">บันทึกภาพเงาต้นฉบับ</h2>
-    <p class="hint">แตะที่ท่าใดท่าหนึ่งเพื่อเปิดกล้องบันทึกภาพเงาและตำแหน่งอ้างอิง</p>
-    <div class="pose-grid" id="teacherGrid"></div>
-    <div class="row" style="margin-top:22px;">
-      <button class="btn btn-gold" id="btnGoDashboard">📊 ดูผลนักเรียน</button>
+    <div class="row" style="justify-content:space-between; margin-top:0;">
+      <div>
+        <h2 style="color:var(--maroon-dark); margin:0;">จัดการภาพต้นฉบับนาฏยศัพท์ 8 ท่า</h2>
+        <p class="hint" style="margin:4px 0 0;">อัปโหลดไฟล์ภาพถ่ายต้นฉบับของคุณครู (ไฟล์ JPG/PNG จากเครื่อง) หรือถ่ายภาพสดด้วยกล้อง ระบบจะประมวลผลขนาดจริงอัตโนมัติ</p>
+      </div>
+      <button class="btn btn-gold" id="btnGoDashboard">📊 ดูรายงานผลนักเรียน</button>
     </div>
+
+    <!-- Bulk Upload Box -->
+    <div class="bulk-bar" style="margin-top:16px;">
+      <div class="bulk-info">
+        <h3>📂 อัปโหลดภาพต้นฉบับแบบหลายไฟล์พร้อมกัน (Bulk Upload)</h3>
+        <p>สามารถลากไฟล์ภาพ 8 ท่า หรือคลิกเลือกไฟล์ภาพหลายๆ ภาพจากเครื่อง ระบบจะจับคู่ชื่อไฟล์หรือลำดับให้อัตโนมัติ</p>
+      </div>
+      <label class="btn btn-teal">
+        📁 เลือกหลายไฟล์ภาพ
+        <input type="file" id="bulkFileInput" multiple accept="image/*" style="display:none;">
+      </label>
+    </div>
+
+    <div class="pose-grid" id="teacherGrid"></div>
   </div>
 
-  <!-- TEACHER: record single pose -->
-  <div class="screen" id="screen-record">
-    <button class="navbtn" id="btnBackTeacher">← กลับ</button>
-    <div class="pose-current"><span class="num" id="recNum"></span><h2 id="recName"></h2></div>
-    <div class="stage-wrap">
-      <div class="camera-box">
-        <video id="recVideo" autoplay playsinline muted></video>
-        <div class="status-pill"><span class="dot" id="recDot"></span><span id="recStatus">กำลังเปิดกล้อง…</span></div>
+  <!-- UPLOAD / RECORD MODAL FOR SINGLE POSE -->
+  <div class="modal-backdrop" id="poseModal">
+    <div class="modal-card">
+      <button class="modal-close" id="btnCloseModal">✕</button>
+      <h3 style="color:var(--maroon-dark); margin-top:0;" id="modalTitle">อัปโหลดภาพต้นฉบับ: ตั้งวงบน</h3>
+      <p class="hint">คุณสามารถอัปโหลดไฟล์ภาพถ่ายจริงของคุณครู หรือเปิดกล้องถ่ายภาพใหม่ได้</p>
+
+      <!-- Tab Switcher -->
+      <div class="row" style="margin-top:10px;">
+        <button class="btn btn-gold" id="tabUpload">🖼 อัปโหลดไฟล์ภาพจากเครื่อง</button>
+        <button class="btn btn-ghost" id="tabCamera">📸 ถ่ายด้วยกล้องสด</button>
       </div>
-      <div class="side-panel">
-        <p>ให้ครูจัดท่าทางให้ชัดเจน อยู่กึ่งกลางเฟรม แล้วกดปุ่ม “จับภาพ” ระบบจะประมวลผลภาพเงาสีดำพื้นขาวขอบแดง และบันทึกตำแหน่งร่างกายไว้เป็นค่าอ้างอิง</p>
-        <div class="row">
-          <button class="btn btn-primary" id="btnCapture">📸 จับภาพ</button>
-          <button class="btn btn-ghost" id="btnRecall" style="display:none;">ลองใหม่</button>
+
+      <!-- Tab Content 1: File Upload -->
+      <div id="viewUpload" style="margin-top:14px;">
+        <div class="upload-box" id="dropZone">
+          <span class="up-icon">📤</span>
+          <p><strong>คลิกเพื่อเลือกไฟล์ภาพ</strong> หรือ ลากไฟล์ภาพมาวางที่นี่</p>
+          <span>รองรับไฟล์ JPG, PNG, WEBP (ภาพจะถูกปรับสเกลขนาดจริงอัตโนมัติ)</span>
+          <input type="file" id="singleFileInput" accept="image/*" style="display:none;">
         </div>
-        <canvas id="recPreview" style="display:none; margin-top:16px; width:100%; max-width:280px; border-radius:12px; box-shadow:var(--shadow); border:2px solid var(--maroon);"></canvas>
-        <div class="row" id="saveRow" style="display:none;">
-          <button class="btn btn-gold" id="btnSaveRef">✅ บันทึกเป็นภาพอ้างอิง</button>
+      </div>
+
+      <!-- Tab Content 2: Live Camera -->
+      <div id="viewCamera" style="margin-top:14px; display:none;">
+        <div class="camera-box" style="margin:0 auto;">
+          <video id="recVideo" autoplay playsinline muted></video>
+          <div class="status-pill"><span class="dot" id="recDot"></span><span id="recStatus">กำลังเปิดกล้อง…</span></div>
         </div>
+        <div class="row" style="justify-content:center; margin-top:12px;">
+          <button class="btn btn-primary" id="btnCapture">📸 ถ่ายภาพสด</button>
+        </div>
+      </div>
+
+      <!-- Preview Stage -->
+      <div class="preview-stage" id="previewStage" style="display:none;">
+        <div class="preview-box">
+          <h5>1. ภาพต้นฉบับขนาดจริง (Original Image)</h5>
+          <img id="imgOriginalPreview" alt="ภาพต้นฉบับ">
+        </div>
+        <div class="preview-box">
+          <h5>2. ภาพเงา AI ตรวจจับ (Generated Silhouette)</h5>
+          <canvas id="canvasSilhouettePreview"></canvas>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="row" id="modalActions" style="justify-content:flex-end; display:none; margin-top:20px;">
+        <button class="btn btn-ghost" id="btnCancelModal">ยกเลิก</button>
+        <button class="btn btn-gold" id="btnSaveSingleRef">✅ บันทึกเป็นภาพอ้างอิง</button>
       </div>
     </div>
   </div>
 
   <!-- TEACHER DASHBOARD -->
   <div class="screen" id="screen-dashboard">
-    <button class="navbtn" id="btnBackTeacher2">← กลับ</button>
-    <h2 style="color:var(--maroon-dark)">ผลการเล่นของนักเรียน</h2>
+    <button class="navbtn" id="btnBackTeacher">← กลับหน้าจัดการท่า</button>
+    <h2 style="color:var(--maroon-dark); margin-top:14px;">รายงานผลการปฏิบัติและพัฒนาการนักเรียน</h2>
+    <p class="hint">ติดตามผลการทดสอบปฏิบัตินาฏยศัพท์ตามตัวชี้วัดกระบวนการทักษะปฏิบัติของซิมพ์ซัน (Simpson)</p>
     <div id="dashList" class="student-list"></div>
     <div id="dashDetail"></div>
   </div>
@@ -224,48 +424,87 @@ table.hist th{background:var(--maroon); color:#fff; font-weight:600;}
   <!-- STUDENT LOGIN -->
   <div class="screen" id="screen-login">
     <div class="login-card">
-      <h2 style="margin:0; color:var(--maroon-dark)">เข้าสู่เกม</h2>
-      <p class="hint">พิมพ์ชื่อของนักเรียนเพื่อเริ่มเล่นและบันทึกผล</p>
-      <input type="text" id="studentName" placeholder="ชื่อ-นามสกุล">
+      <div style="font-size:42px; margin-bottom:6px;">💃</div>
+      <h2 style="margin:0; color:var(--maroon-dark)">เข้าสู่บทเรียนและเกมปฏิบัติ</h2>
+      <p class="hint">กรอกชื่อ-นามสกุล และเลขที่ของนักเรียนเพื่อเริ่มทดสอบปฏิบัติ</p>
+      <input type="text" id="studentName" placeholder="เช่น เด็กชายสรวิชญ์ ปัญญาดี เลขที่ 1">
       <div class="row" style="justify-content:center;">
-        <button class="btn btn-primary" id="btnStart">🎬 เริ่มเล่น (180 วินาที)</button>
+        <button class="btn btn-primary" id="btnStartGame">🎬 เริ่มทดสอบปฏิบัติ (180 วินาที)</button>
       </div>
-      <p class="hint" id="loginWarn" style="color:var(--warn); display:none;">ยังไม่มีภาพอ้างอิงจากครู กรุณาให้ครูบันทึกท่าก่อนอย่างน้อย 1 ท่า</p>
+      <p class="hint" id="loginWarn" style="color:var(--warn); display:none; margin-top:12px;">⚠️ ยังไม่มีภาพอ้างอิงจากครู กรุณาแจ้งครูผู้สอนเพื่ออัปโหลดภาพต้นฉบับก่อน</p>
     </div>
   </div>
 
-  <!-- GAME -->
+  <!-- GAME SCREEN -->
   <div class="screen" id="screen-game">
     <div class="game-top">
       <div class="progress-dots" id="progressDots"></div>
-      <div class="timerbox" id="timerBox">180</div>
+      <div class="timerbox" id="timerBox">⏱ 180</div>
     </div>
-    <div class="pose-current"><span class="num" id="gameNum"></span><h2 id="gameName"></h2></div>
+
+    <div class="pose-current">
+      <span class="num" id="gameNum">ท่าที่ 1 จาก 8</span>
+      <h2 id="gameName">ตั้งวงบน</h2>
+    </div>
+
     <div class="stage-wrap" style="justify-content:center;">
-      <div class="camera-box" id="cameraBox" style="max-width:520px;">
+      <div class="camera-box" id="cameraBox">
         <video id="gameVideo" autoplay playsinline muted></video>
-        <img class="overlay-img" id="gameOverlay">
-        <div class="status-pill"><span class="dot" id="gameDot"></span><span id="gameStatus">กำลังโหลดโมเดล AI…</span></div>
+        <!-- Overlay Layer (Shows original photo or silhouette) -->
+        <img class="overlay-img mode-original" id="gameOverlay">
+        
+        <div class="status-pill">
+          <span class="dot" id="gameDot"></span>
+          <span id="gameStatus">กำลังเตรียมความพร้อม AI…</span>
+        </div>
+
         <div class="checkmark" id="checkmark">
-          <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#2F8F5B"/><path d="M28 52 L44 68 L74 34" stroke="#fff" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="46" fill="#2F8F5B"/>
+            <path d="M28 52 L44 68 L74 34" stroke="#fff" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </div>
       </div>
     </div>
+
+    <!-- Overlay Customization Bar for Student -->
+    <div class="overlay-controls" style="max-width:540px; margin:14px auto 0;">
+      <label>
+        โหมดซ้อนภาพ:
+        <select id="overlayModeSelect" style="padding:6px 10px; border-radius:8px; border:1px solid #c8b8a4; font-family:'Sarabun'; font-size:13px; font-weight:600;">
+          <option value="original">🖼 ภาพถ่ายครูจริง (Full Color)</option>
+          <option value="silhouette">👥 ภาพเงาดำ-ขอบแดง (Silhouette)</option>
+        </select>
+      </label>
+
+      <label>
+        ความโปร่งแสง:
+        <input type="range" id="opacitySlider" min="10" max="90" value="55">
+        <span id="opacityVal">55%</span>
+      </label>
+    </div>
+
+    <!-- Real-time Accuracy Fill Bar -->
     <div class="match-fill"><i id="matchFill"></i></div>
-    <div class="row" style="justify-content:center;">
-      <button class="btn btn-ghost" id="btnSkip">⏭ ข้าม (Pass)</button>
-      <button class="btn btn-gold" id="btnStopTimer" disabled>⏹ หยุดเวลา / จบเกม</button>
+    <div style="text-align:center; font-size:12px; color:var(--gray-sub); font-weight:600;" id="matchText">ความตรงกับภาพต้นฉบับ: 0%</div>
+
+    <div class="row" style="justify-content:center; margin-top:16px;">
+      <button class="btn btn-ghost" id="btnSkip">⏭ ข้ามไปท่าถัดไป (Pass)</button>
+      <button class="btn btn-gold" id="btnStopTimer" disabled>⏹ สรุปผลและจบการทดสอบ</button>
     </div>
   </div>
 
-  <!-- RESULT -->
+  <!-- RESULT SCREEN -->
   <div class="screen" id="screen-result">
     <div class="result-card">
+      <div style="font-size:50px;">🏆</div>
+      <h2 style="margin:0; color:var(--maroon-dark);">ผลการทดสอบปฏิบัตินาฏยศัพท์</h2>
       <div class="score" id="resScore">0/8</div>
-      <div class="sub" id="resTime">เวลาที่ใช้: 0 วินาที</div>
+      <div class="sub" id="resTime">เวลาที่ใช้รวม: 0 วินาที</div>
+      <div id="resEvaluation" style="background:#faf5eb; padding:14px; border-radius:12px; font-size:14px; color:var(--ink); margin-bottom:20px;"></div>
       <div class="row" style="justify-content:center;">
-        <button class="btn btn-primary" id="btnReplay">🔁 เล่นอีกครั้ง</button>
-        <button class="btn btn-ghost" id="btnHome2">🏠 หน้าหลัก</button>
+        <button class="btn btn-primary" id="btnReplay">🔁 ทดสอบอีกครั้ง</button>
+        <button class="btn btn-ghost" id="btnHome2">🏠 กลับหน้าหลัก</button>
       </div>
     </div>
   </div>
@@ -274,513 +513,800 @@ table.hist th{background:var(--maroon); color:#fff; font-weight:600;}
 
 <script>
 /* ---------------------------------------------------------------
-   DATA
+   DATA CONFIG & STORAGE UTILITIES
 --------------------------------------------------------------- */
 const POSES = [
-  {id:'p1', name:'ตั้งวงบน'},
-  {id:'p2', name:'ตั้งวงกลาง'},
-  {id:'p3', name:'ตั้งวงล่าง'},
-  {id:'p4', name:'จีบคว่ำ'},
-  {id:'p5', name:'จีบหงาย'},
-  {id:'p6', name:'จีบปรกข้าง'},
-  {id:'p7', name:'จีบส่งหลัง'},
-  {id:'p8', name:'จีบล่อแก้ว'},
+  { id: 'p1', name: 'ตั้งวงบน' },
+  { id: 'p2', name: 'ตั้งวงกลาง' },
+  { id: 'p3', name: 'ตั้งวงล่าง' },
+  { id: 'p4', name: 'จีบคว่ำ' },
+  { id: 'p5', name: 'จีบหงาย' },
+  { id: 'p6', name: 'จีบปรกข้าง' },
+  { id: 'p7', name: 'จีบส่งหลัง' },
+  { id: 'p8', name: 'จีบล่อแก้ว' }
 ];
-const GRID_W = 40, GRID_H = 30; // silhouette comparison resolution
-const MATCH_THRESHOLD = 0.55;   // IoU needed to count as correct
-const HOLD_FRAMES = 10;         // consecutive good frames needed
+
+const GRID_W = 40, GRID_H = 30; // Grid resolution for IoU comparison
+const MATCH_THRESHOLD = 0.52;   // Required Intersection-over-Union matching ratio
+const HOLD_FRAMES = 8;          // Consecutive frames to confirm muscle memory
 const GAME_SECONDS = 180;
 
-let poseRefs = {}; // loaded from storage
+let poseRefs = {}; // Loaded reference images and grids
 
-/* ---------------------------------------------------------------
-   STORAGE HELPERS
---------------------------------------------------------------- */
-async function loadRefs(){
-  try{
-    const r = await window.storage.get('pose-refs', true);
+/* Safe Storage with LocalStorage fallback */
+async function loadRefs() {
+  try {
+    let r = null;
+    if (window.storage && window.storage.get) {
+      r = await window.storage.get('pose-refs', true);
+    } else {
+      r = { value: localStorage.getItem('pose-refs') };
+    }
     poseRefs = r && r.value ? JSON.parse(r.value) : {};
-  }catch(e){ poseRefs = {}; }
+  } catch (e) {
+    try {
+      const val = localStorage.getItem('pose-refs');
+      poseRefs = val ? JSON.parse(val) : {};
+    } catch(err) { poseRefs = {}; }
+  }
 }
-async function saveRefs(){
-  await window.storage.set('pose-refs', JSON.stringify(poseRefs), true);
+
+async function saveRefs() {
+  const jsonStr = JSON.stringify(poseRefs);
+  try {
+    if (window.storage && window.storage.set) {
+      await window.storage.set('pose-refs', jsonStr, true);
+    }
+  } catch (e) {}
+  try {
+    localStorage.setItem('pose-refs', jsonStr);
+  } catch (e) {}
 }
-function slug(name){ return name.trim().toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9ก-๙_]/g,''); }
-async function loadStudentList(){
-  try{
-    const r = await window.storage.get('student-list', true);
+
+function slug(name) { return name.trim().toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9ก-๙_]/g,''); }
+
+async function loadStudentList() {
+  try {
+    let r = null;
+    if (window.storage && window.storage.get) {
+      r = await window.storage.get('student-list', true);
+    } else {
+      r = { value: localStorage.getItem('student-list') };
+    }
     return r && r.value ? JSON.parse(r.value) : [];
-  }catch(e){ return []; }
+  } catch (e) {
+    const val = localStorage.getItem('student-list');
+    return val ? JSON.parse(val) : [];
+  }
 }
-async function saveStudentList(list){
-  await window.storage.set('student-list', JSON.stringify(list), true);
+
+async function saveStudentList(list) {
+  const str = JSON.stringify(list);
+  try { if (window.storage && window.storage.set) await window.storage.set('student-list', str, true); } catch(e){}
+  try { localStorage.setItem('student-list', str); } catch(e){}
 }
-async function loadStudentSessions(name){
-  try{
-    const r = await window.storage.get('student:'+slug(name), true);
+
+async function loadStudentSessions(name) {
+  const key = 'student:' + slug(name);
+  try {
+    let r = null;
+    if (window.storage && window.storage.get) {
+      r = await window.storage.get(key, true);
+    } else {
+      r = { value: localStorage.getItem(key) };
+    }
     return r && r.value ? JSON.parse(r.value) : [];
-  }catch(e){ return []; }
+  } catch(e) {
+    const val = localStorage.getItem(key);
+    return val ? JSON.parse(val) : [];
+  }
 }
-async function appendStudentSession(name, session){
-  const key = 'student:'+slug(name);
+
+async function appendStudentSession(name, session) {
+  const key = 'student:' + slug(name);
   let sessions = await loadStudentSessions(name);
   sessions.push(session);
-  await window.storage.set(key, JSON.stringify(sessions), true);
+  const str = JSON.stringify(sessions);
+  try { if (window.storage && window.storage.set) await window.storage.set(key, str, true); } catch(e){}
+  try { localStorage.setItem(key, str); } catch(e){}
+
   let list = await loadStudentList();
-  if(!list.find(s=>s.slug===slug(name))){
-    list.push({slug:slug(name), name});
+  if (!list.find(s => s.slug === slug(name))) {
+    list.push({ slug: slug(name), name });
     await saveStudentList(list);
   }
 }
 
 /* ---------------------------------------------------------------
-   SCREEN NAV
+   NAVIGATION LOGIC
 --------------------------------------------------------------- */
-function show(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
-document.getElementById('btnHome').onclick = ()=>{ stopAllCameras(); show('screen-home'); };
-document.getElementById('btnHome2').onclick = ()=>{ stopAllCameras(); show('screen-home'); };
-document.getElementById('cardTeacher').onclick = async ()=>{ await loadRefs(); renderTeacherGrid(); show('screen-teacher'); };
-document.getElementById('cardStudent').onclick = async ()=>{
+
+document.getElementById('btnHome').onclick = () => { stopAllCameras(); showScreen('screen-home'); };
+document.getElementById('btnHome2').onclick = () => { stopAllCameras(); showScreen('screen-home'); };
+document.getElementById('cardTeacher').onclick = async () => { await loadRefs(); renderTeacherGrid(); showScreen('screen-teacher'); };
+document.getElementById('cardStudent').onclick = async () => {
   await loadRefs();
-  const hasAny = Object.keys(poseRefs).length>0;
-  document.getElementById('loginWarn').style.display = hasAny? 'none':'block';
-  show('screen-login');
+  const hasAny = Object.keys(poseRefs).length > 0;
+  document.getElementById('loginWarn').style.display = hasAny ? 'none' : 'block';
+  showScreen('screen-login');
 };
-document.getElementById('btnGoDashboard').onclick = ()=>{ openDashboard(); };
-document.getElementById('btnBackTeacher').onclick = ()=>{ stopAllCameras(); show('screen-teacher'); };
-document.getElementById('btnBackTeacher2').onclick = ()=>{ show('screen-teacher'); };
+document.getElementById('btnGoDashboard').onclick = () => { openDashboard(); };
+document.getElementById('btnBackTeacher').onclick = () => { showScreen('screen-teacher'); };
 
 /* ---------------------------------------------------------------
-   AUDIO (Tone.js)
+   AUDIO SYSTEM (Tone.js)
 --------------------------------------------------------------- */
-let audioReady=false, bgLoop=null, synth=null, correctSynth=null;
-async function ensureAudio(){
-  if(audioReady) return;
-  await Tone.start();
-  synth = new Tone.PolySynth(Tone.Synth,{oscillator:{type:'triangle'}, volume:-14}).toDestination();
-  correctSynth = new Tone.Synth({oscillator:{type:'square'}, volume:-10}).toDestination();
-  const notes = ['C4','E4','G4','C5','G4','E4'];
-  let i=0;
-  bgLoop = new Tone.Loop(time=>{
-    synth.triggerAttackRelease(notes[i % notes.length], '8n', time);
-    i++;
-  }, '8n');
-  Tone.Transport.bpm.value = 132;
-  audioReady = true;
+let audioReady = false, bgLoop = null, synth = null, correctSynth = null;
+async function ensureAudio() {
+  if (audioReady) return;
+  try {
+    await Tone.start();
+    synth = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, volume: -16 }).toDestination();
+    correctSynth = new Tone.Synth({ oscillator: { type: 'square' }, volume: -10 }).toDestination();
+    const notes = ['C4', 'E4', 'G4', 'C5', 'G4', 'E4'];
+    let i = 0;
+    bgLoop = new Tone.Loop(time => {
+      synth.triggerAttackRelease(notes[i % notes.length], '8n', time);
+      i++;
+    }, '8n');
+    Tone.Transport.bpm.value = 120;
+    audioReady = true;
+  } catch(e) {}
 }
-function startMusic(){ if(audioReady){ Tone.Transport.start(); bgLoop.start(0); } }
-function stopMusic(){ if(audioReady){ bgLoop.stop(); Tone.Transport.stop(); } }
-function playCorrect(){ if(audioReady) correctSynth.triggerAttackRelease('C6','8n'); }
-function playSkip(){ if(audioReady) correctSynth.triggerAttackRelease('A3','16n'); }
-function playFanfare(){
-  if(!audioReady) return;
-  ['C5','E5','G5','C6'].forEach((n,idx)=>{
-    correctSynth.triggerAttackRelease(n,'8n', Tone.now()+idx*0.12);
+function startMusic() { if (audioReady && bgLoop) { Tone.Transport.start(); bgLoop.start(0); } }
+function stopMusic() { if (audioReady && bgLoop) { bgLoop.stop(); Tone.Transport.stop(); } }
+function playCorrect() { if (audioReady && correctSynth) correctSynth.triggerAttackRelease('C6', '8n'); }
+function playSkip() { if (audioReady && correctSynth) correctSynth.triggerAttackRelease('A3', '16n'); }
+function playFanfare() {
+  if (!audioReady || !correctSynth) return;
+  ['C5', 'E5', 'G5', 'C6'].forEach((n, idx) => {
+    correctSynth.triggerAttackRelease(n, '8n', Tone.now() + idx * 0.12);
   });
 }
 
 /* ---------------------------------------------------------------
-   SELFIE SEGMENTATION SETUP (shared model instance)
+   MEDIAPIPE SELFIE SEGMENTATION MODEL SETUP
 --------------------------------------------------------------- */
 let segModel = null;
-function getSegModel(){
-  if(segModel) return segModel;
-  segModel = new SelfieSegmentation({locateFile:(f)=>`https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${f}`});
-  segModel.setOptions({modelSelection:1});
+function getSegModel() {
+  if (segModel) return segModel;
+  segModel = new SelfieSegmentation({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
+  });
+  segModel.setOptions({ modelSelection: 1 });
   return segModel;
 }
 
-async function startCamera(videoEl){
-  const stream = await navigator.mediaDevices.getUserMedia({video:{width:640,height:480}, audio:false});
+async function startCamera(videoEl) {
+  const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
   videoEl.srcObject = stream;
-  await new Promise(res=>{ videoEl.onloadedmetadata = ()=>{ videoEl.play(); res(); }; });
+  await new Promise(res => { videoEl.onloadedmetadata = () => { videoEl.play(); res(); }; });
   return stream;
 }
-function stopStream(videoEl){
-  if(videoEl && videoEl.srcObject){
-    videoEl.srcObject.getTracks().forEach(t=>t.stop());
+
+function stopStream(videoEl) {
+  if (videoEl && videoEl.srcObject) {
+    videoEl.srcObject.getTracks().forEach(t => t.stop());
     videoEl.srcObject = null;
   }
 }
-function stopAllCameras(){
+
+function stopAllCameras() {
   stopStream(document.getElementById('recVideo'));
   stopStream(document.getElementById('gameVideo'));
   recLoopActive = false; gameLoopActive = false;
   stopMusic();
 }
 
-/* build a boolean grid (GRID_W x GRID_H) from a segmentation mask source, mirrored to match display */
-function maskToGrid(maskSource, srcW, srcH){
+/* Convert Segmentation Mask to Binary Grid (40x30) */
+function maskToGrid(maskSource, srcW, srcH) {
   const c = document.createElement('canvas');
   c.width = GRID_W; c.height = GRID_H;
   const ctx = c.getContext('2d');
   ctx.save();
-  ctx.translate(GRID_W,0); ctx.scale(-1,1); // mirror to match on-screen video
-  ctx.drawImage(maskSource, 0,0, srcW, srcH, 0,0, GRID_W, GRID_H);
+  ctx.translate(GRID_W, 0); ctx.scale(-1, 1); // Mirror horizontally
+  ctx.drawImage(maskSource, 0, 0, srcW, srcH, 0, 0, GRID_W, GRID_H);
   ctx.restore();
-  const data = ctx.getImageData(0,0,GRID_W,GRID_H).data;
-  const grid = new Uint8Array(GRID_W*GRID_H);
-  for(let i=0;i<grid.length;i++){
-    grid[i] = data[i*4] > 110 ? 1 : 0; // red channel = mask luminance
+  const data = ctx.getImageData(0, 0, GRID_W, GRID_H).data;
+  const grid = new Uint8Array(GRID_W * GRID_H);
+  for (let i = 0; i < grid.length; i++) {
+    grid[i] = data[i * 4] > 100 ? 1 : 0;
   }
   return grid;
 }
-function iou(gridA, gridB){
-  let inter=0, union=0;
-  for(let i=0;i<gridA.length;i++){
-    const a=gridA[i], b=gridB[i];
-    if(a||b) union++;
-    if(a&&b) inter++;
+
+function iou(gridA, gridB) {
+  let inter = 0, union = 0;
+  for (let i = 0; i < gridA.length; i++) {
+    const a = gridA[i], b = gridB[i];
+    if (a || b) union++;
+    if (a && b) inter++;
   }
-  if(union===0) return 0;
-  return inter/union;
+  return union === 0 ? 0 : inter / union;
 }
-function gridToString(grid){ return Array.from(grid).join(''); }
-function stringToGrid(str){ return new Uint8Array(str.split('').map(Number)); }
 
-/* build black-silhouette / red-outline PNG from mask, white background */
-function renderSilhouettePNG(maskSource, srcW, srcH){
-  const W=320, H=240;
-  const tmp = document.createElement('canvas'); tmp.width=W; tmp.height=H;
+function gridToString(grid) { return Array.from(grid).join(''); }
+function stringToGrid(str) { return new Uint8Array(str.split('').map(Number)); }
+
+/* Generate crisp black silhouette with red border PNG */
+function renderSilhouettePNG(maskSource, srcW, srcH) {
+  const W = 320, H = 240;
+  const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H;
   const tctx = tmp.getContext('2d');
-  tctx.save(); tctx.translate(W,0); tctx.scale(-1,1);
-  tctx.drawImage(maskSource,0,0,srcW,srcH,0,0,W,H);
+  tctx.save(); tctx.translate(W, 0); tctx.scale(-1, 1);
+  tctx.drawImage(maskSource, 0, 0, srcW, srcH, 0, 0, W, H);
   tctx.restore();
-  const md = tctx.getImageData(0,0,W,H);
-  // build alpha-only mask (r channel as alpha)
-  const alphaCanvas = document.createElement('canvas'); alphaCanvas.width=W; alphaCanvas.height=H;
-  const actx = alphaCanvas.getContext('2d');
-  const outImg = actx.createImageData(W,H);
-  for(let i=0;i<md.data.length;i+=4){
-    const v = md.data[i] > 90 ? 255:0;
-    outImg.data[i]=0; outImg.data[i+1]=0; outImg.data[i+2]=0; outImg.data[i+3]=v;
-  }
-  actx.putImageData(outImg,0,0);
+  const md = tctx.getImageData(0, 0, W, H);
 
-  const out = document.createElement('canvas'); out.width=W; out.height=H;
+  const alphaCanvas = document.createElement('canvas'); alphaCanvas.width = W; alphaCanvas.height = H;
+  const actx = alphaCanvas.getContext('2d');
+  const outImg = actx.createImageData(W, H);
+  for (let i = 0; i < md.data.length; i += 4) {
+    const v = md.data[i] > 90 ? 255 : 0;
+    outImg.data[i] = 0; outImg.data[i+1] = 0; outImg.data[i+2] = 0; outImg.data[i+3] = v;
+  }
+  actx.putImageData(outImg, 0, 0);
+
+  const out = document.createElement('canvas'); out.width = W; out.height = H;
   const octx = out.getContext('2d');
-  octx.fillStyle = '#ffffff'; octx.fillRect(0,0,W,H);
-  // red outline: draw mask offset in red multiple directions
-  octx.save();
-  octx.filter = 'none';
-  const offsets = [[-3,0],[3,0],[0,-3],[0,3],[-3,-3],[3,3],[-3,3],[3,-3],[-2,-2],[2,2]];
-  offsets.forEach(([dx,dy])=>{
-    octx.globalCompositeOperation='source-over';
-    octx.drawImage(tintCanvas(alphaCanvas,'#C0392B'), dx, dy);
+  octx.fillStyle = '#ffffff'; octx.fillRect(0, 0, W, H);
+
+  const offsets = [[-3,0],[3,0],[0,-3],[0,3],[-3,-3],[3,3],[-3,3],[3,-3]];
+  offsets.forEach(([dx,dy]) => {
+    octx.drawImage(tintCanvas(alphaCanvas, '#C0392B'), dx, dy);
   });
-  // black fill on top (core silhouette)
-  octx.drawImage(tintCanvas(alphaCanvas,'#151015'),0,0);
-  octx.restore();
+  octx.drawImage(tintCanvas(alphaCanvas, '#151015'), 0, 0);
   return out.toDataURL('image/png');
 }
-function tintCanvas(alphaCanvas, color){
-  const c = document.createElement('canvas'); c.width=alphaCanvas.width; c.height=alphaCanvas.height;
+
+function tintCanvas(alphaCanvas, color) {
+  const c = document.createElement('canvas'); c.width = alphaCanvas.width; c.height = alphaCanvas.height;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = color;
-  ctx.fillRect(0,0,c.width,c.height);
+  ctx.fillStyle = color; ctx.fillRect(0, 0, c.width, c.height);
   ctx.globalCompositeOperation = 'destination-in';
-  ctx.drawImage(alphaCanvas,0,0);
+  ctx.drawImage(alphaCanvas, 0, 0);
   return c;
 }
 
 /* ---------------------------------------------------------------
-   TEACHER: pose grid + recording
+   TEACHER MODE: POSE MANAGEMENT & IMAGE UPLOAD
 --------------------------------------------------------------- */
-function renderTeacherGrid(){
+function renderTeacherGrid() {
   const grid = document.getElementById('teacherGrid');
   grid.innerHTML = '';
-  POSES.forEach((p,idx)=>{
+  POSES.forEach((p, idx) => {
     const ref = poseRefs[p.id];
     const card = document.createElement('div');
-    card.className='pose-card';
+    card.className = 'pose-card';
     card.innerHTML = `
-      <div class="pose-thumb">${ref? `<img src="${ref.thumb}">` : 'ยังไม่มีภาพ'}</div>
+      <div class="pose-thumb">
+        ${ref ? `<img src="${ref.originalImg || ref.thumb}" alt="${p.name}">` : 'ยังไม่มีภาพต้นฉบับ'}
+      </div>
       <div class="pose-meta">
-        <div class="num">ท่าที่ ${idx+1}</div>
-        <h4>${p.name}</h4>
-        <span class="tag ${ref?'done':'todo'}">${ref?'บันทึกแล้ว':'ยังไม่บันทึก'}</span>
+        <div>
+          <div class="num">ท่าที่ ${idx + 1}</div>
+          <h4>${p.name}</h4>
+          <span class="tag ${ref ? 'done' : 'todo'}">${ref ? '✓ บันทึกภาพแล้ว' : 'ยังไม่อัปโหลด'}</span>
+        </div>
+        <div class="pose-card-actions">
+          <button class="btn btn-gold" style="padding:6px 12px; font-size:12px; width:100%;" onclick="openPoseModal('${p.id}')">
+            ${ref ? '✏️ เปลี่ยนภาพ' : '📤 อัปโหลดภาพ'}
+          </button>
+        </div>
       </div>`;
-    card.onclick = ()=> openRecorder(p, idx);
     grid.appendChild(card);
   });
 }
 
-let recCurrentPose=null, recLoopActive=false, recLatestResults=null, recVideoEl, recStream;
-async function openRecorder(pose, idx){
-  recCurrentPose = pose;
-  document.getElementById('recNum').textContent = 'ท่าที่ '+(idx+1);
-  document.getElementById('recName').textContent = pose.name;
-  document.getElementById('recPreview').style.display='none';
-  document.getElementById('saveRow').style.display='none';
-  document.getElementById('btnRecall').style.display='none';
-  document.getElementById('recStatus').textContent = 'กำลังเปิดกล้อง…';
-  document.getElementById('recDot').classList.remove('ready');
-  show('screen-record');
-  recVideoEl = document.getElementById('recVideo');
-  try{
-    recStream = await startCamera(recVideoEl);
-  }catch(e){
-    document.getElementById('recStatus').textContent = 'เปิดกล้องไม่สำเร็จ: '+e.message;
+let activeModalPoseId = null;
+let currentProcessedGrid = null;
+let currentProcessedSilhouettePNG = null;
+let currentOriginalDataURL = null;
+
+function openPoseModal(poseId) {
+  activeModalPoseId = poseId;
+  const pose = POSES.find(p => p.id === poseId);
+  document.getElementById('modalTitle').textContent = `อัปโหลดภาพต้นฉบับ: ${pose.name}`;
+  document.getElementById('previewStage').style.display = 'none';
+  document.getElementById('modalActions').style.display = 'none';
+  
+  // Switch to upload tab by default
+  switchTab('upload');
+  document.getElementById('poseModal').classList.add('active');
+}
+
+document.getElementById('btnCloseModal').onclick = closeModal;
+document.getElementById('btnCancelModal').onclick = closeModal;
+function closeModal() {
+  document.getElementById('poseModal').classList.remove('active');
+  stopStream(document.getElementById('recVideo'));
+  recLoopActive = false;
+}
+
+/* Tab Switcher in Modal */
+document.getElementById('tabUpload').onclick = () => switchTab('upload');
+document.getElementById('tabCamera').onclick = () => switchTab('camera');
+
+function switchTab(tab) {
+  if (tab === 'upload') {
+    document.getElementById('tabUpload').className = 'btn btn-gold';
+    document.getElementById('tabCamera').className = 'btn btn-ghost';
+    document.getElementById('viewUpload').style.display = 'block';
+    document.getElementById('viewCamera').style.display = 'none';
+    stopStream(document.getElementById('recVideo'));
+    recLoopActive = false;
+  } else {
+    document.getElementById('tabUpload').className = 'btn btn-ghost';
+    document.getElementById('tabCamera').className = 'btn btn-gold';
+    document.getElementById('viewUpload').style.display = 'none';
+    document.getElementById('viewCamera').style.display = 'block';
+    initModalCamera();
+  }
+}
+
+/* Single File Upload & Drag-and-Drop */
+const dropZone = document.getElementById('dropZone');
+const singleFileInput = document.getElementById('singleFileInput');
+dropZone.onclick = () => singleFileInput.click();
+singleFileInput.onchange = (e) => { if (e.target.files[0]) handleUploadedFile(e.target.files[0]); };
+
+dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
+dropZone.ondragleave = () => dropZone.classList.remove('dragover');
+dropZone.ondrop = (e) => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleUploadedFile(e.dataTransfer.files[0]);
+};
+
+async function handleUploadedFile(file) {
+  const reader = new FileReader();
+  reader.onload = async (evt) => {
+    currentOriginalDataURL = evt.target.result;
+    await processImageForSegmentation(currentOriginalDataURL);
+  };
+  reader.readAsDataURL(file);
+}
+
+/* Process image with MediaPipe Selfie Segmentation */
+async function processImageForSegmentation(dataUrl) {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = async () => {
+    const model = getSegModel();
+    model.onResults((results) => {
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+      
+      const grid = maskToGrid(results.segmentationMask, w, h);
+      const silhouettePNG = renderSilhouettePNG(results.segmentationMask, w, h);
+
+      currentProcessedGrid = gridToString(grid);
+      currentProcessedSilhouettePNG = silhouettePNG;
+
+      // Show preview
+      document.getElementById('imgOriginalPreview').src = dataUrl;
+      const canvasPrev = document.getElementById('canvasSilhouettePreview');
+      const ctx = canvasPrev.getContext('2d');
+      const simg = new Image();
+      simg.onload = () => {
+        canvasPrev.width = simg.width; canvasPrev.height = simg.height;
+        ctx.drawImage(simg, 0, 0);
+      };
+      simg.src = silhouettePNG;
+
+      document.getElementById('previewStage').style.display = 'grid';
+      document.getElementById('modalActions').style.display = 'flex';
+    });
+
+    await model.send({ image: img });
+  };
+  img.src = dataUrl;
+}
+
+/* Bulk Upload Implementation */
+document.getElementById('bulkFileInput').onchange = async (e) => {
+  const files = Array.from(e.target.files);
+  if (files.length === 0) return;
+
+  alert(`กำลังประมวลผลไฟล์ภาพ ${files.length} ไฟล์ โปรดรอสักครู่...`);
+  
+  for (let i = 0; i < files.length && i < POSES.length; i++) {
+    const file = files[i];
+    const poseId = POSES[i].id;
+    await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = async (evt) => {
+        const dataUrl = evt.target.result;
+        const img = new Image();
+        img.onload = async () => {
+          const model = getSegModel();
+          model.onResults(async (results) => {
+            const w = img.naturalWidth || img.width;
+            const h = img.naturalHeight || img.height;
+            const grid = maskToGrid(results.segmentationMask, w, h);
+            const silhouettePNG = renderSilhouettePNG(results.segmentationMask, w, h);
+
+            poseRefs[poseId] = {
+              name: POSES[i].name,
+              originalImg: dataUrl,
+              thumb: silhouettePNG,
+              grid: gridToString(grid)
+            };
+            resolve();
+          });
+          await model.send({ image: img });
+        };
+        img.src = dataUrl;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  await saveRefs();
+  renderTeacherGrid();
+  alert('✅ อัปโหลดและประมวลผลภาพต้นฉบับเรียบร้อยแล้ว!');
+};
+
+/* Save Single Pose Reference */
+document.getElementById('btnSaveSingleRef').onclick = async () => {
+  if (!activeModalPoseId || !currentOriginalDataURL || !currentProcessedGrid) return;
+  const pose = POSES.find(p => p.id === activeModalPoseId);
+  poseRefs[activeModalPoseId] = {
+    name: pose.name,
+    originalImg: currentOriginalDataURL,
+    thumb: currentProcessedSilhouettePNG,
+    grid: currentProcessedGrid
+  };
+  await saveRefs();
+  closeModal();
+  renderTeacherGrid();
+};
+
+/* Camera tab inside modal */
+let recLoopActive = false, recLatestResults = null;
+async function initModalCamera() {
+  const videoEl = document.getElementById('recVideo');
+  document.getElementById('recStatus').textContent = 'กำลังเปิดกล้อง...';
+  try {
+    await startCamera(videoEl);
+  } catch (e) {
+    document.getElementById('recStatus').textContent = 'ไม่สามารถเปิดกล้องได้: ' + e.message;
     return;
   }
   const model = getSegModel();
-  model.onResults((results)=>{
-    recLatestResults = results;
-    document.getElementById('recStatus').textContent = 'พร้อมจับภาพ';
+  model.onResults((r) => {
+    recLatestResults = r;
     document.getElementById('recDot').classList.add('ready');
+    document.getElementById('recStatus').textContent = 'พร้อมจับภาพ';
   });
   recLoopActive = true;
   recLoop();
 }
-async function recLoop(){
-  if(!recLoopActive) return;
-  const model = getSegModel();
-  if(recVideoEl.readyState>=2){
-    await model.send({image:recVideoEl});
+
+async function recLoop() {
+  if (!recLoopActive) return;
+  const videoEl = document.getElementById('recVideo');
+  if (videoEl.readyState >= 2) {
+    await getSegModel().send({ image: videoEl });
   }
-  if(recLoopActive) requestAnimationFrame(recLoop);
+  if (recLoopActive) requestAnimationFrame(recLoop);
 }
-document.getElementById('btnCapture').onclick = ()=>{
-  if(!recLatestResults) return;
-  const w = recVideoEl.videoWidth, h = recVideoEl.videoHeight;
+
+document.getElementById('btnCapture').onclick = () => {
+  if (!recLatestResults) return;
+  const videoEl = document.getElementById('recVideo');
+  const w = videoEl.videoWidth, h = videoEl.videoHeight;
+  
+  // Snap frame
+  const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.translate(w, 0); ctx.scale(-1, 1);
+  ctx.drawImage(videoEl, 0, 0, w, h);
+  currentOriginalDataURL = canvas.toDataURL('image/png');
+
   const grid = maskToGrid(recLatestResults.segmentationMask, w, h);
-  const png = renderSilhouettePNG(recLatestResults.segmentationMask, w, h);
-  const prev = document.getElementById('recPreview');
-  prev.style.display='block';
-  const img = new Image();
-  img.onload = ()=>{
-    prev.width = img.width; prev.height = img.height;
-    prev.getContext('2d').drawImage(img,0,0);
+  const silhouettePNG = renderSilhouettePNG(recLatestResults.segmentationMask, w, h);
+
+  currentProcessedGrid = gridToString(grid);
+  currentProcessedSilhouettePNG = silhouettePNG;
+
+  document.getElementById('imgOriginalPreview').src = currentOriginalDataURL;
+  const canvasPrev = document.getElementById('canvasSilhouettePreview');
+  const pctx = canvasPrev.getContext('2d');
+  const simg = new Image();
+  simg.onload = () => {
+    canvasPrev.width = simg.width; canvasPrev.height = simg.height;
+    pctx.drawImage(simg, 0, 0);
   };
-  img.src = png;
-  prev.dataset.png = png;
-  prev.dataset.grid = gridToString(grid);
-  document.getElementById('saveRow').style.display='flex';
-  document.getElementById('btnRecall').style.display='inline-block';
-};
-document.getElementById('btnRecall').onclick = ()=>{
-  document.getElementById('recPreview').style.display='none';
-  document.getElementById('saveRow').style.display='none';
-  document.getElementById('btnRecall').style.display='none';
-};
-document.getElementById('btnSaveRef').onclick = async ()=>{
-  const prev = document.getElementById('recPreview');
-  poseRefs[recCurrentPose.id] = {
-    name: recCurrentPose.name,
-    thumb: prev.dataset.png,
-    grid: prev.dataset.grid
-  };
-  await saveRefs();
-  stopAllCameras();
-  renderTeacherGrid();
-  show('screen-teacher');
+  simg.src = silhouettePNG;
+
+  document.getElementById('previewStage').style.display = 'grid';
+  document.getElementById('modalActions').style.display = 'flex';
 };
 
 /* ---------------------------------------------------------------
    TEACHER DASHBOARD
 --------------------------------------------------------------- */
-async function openDashboard(){
-  show('screen-dashboard');
+async function openDashboard() {
+  showScreen('screen-dashboard');
   const list = await loadStudentList();
   const wrap = document.getElementById('dashList');
   document.getElementById('dashDetail').innerHTML = '';
-  if(list.length===0){
-    wrap.innerHTML = '<p class="hint">ยังไม่มีนักเรียนเล่นเกม</p>';
+  if (list.length === 0) {
+    wrap.innerHTML = '<p class="hint">ยังไม่มีข้อมูลนักเรียนเข้าทดสอบ</p>';
     return;
   }
-  wrap.innerHTML='';
-  for(const s of list){
+  wrap.innerHTML = '';
+  for (const s of list) {
     const sessions = await loadStudentSessions(s.name);
-    const best = sessions.reduce((m,x)=>Math.max(m,x.score),0);
+    const best = sessions.reduce((m, x) => Math.max(m, x.score), 0);
     const div = document.createElement('div');
-    div.className='student-item';
-    div.innerHTML = `<h4>${s.name}</h4><span>เล่นแล้ว ${sessions.length} ครั้ง · คะแนนสูงสุด ${best}/8</span>`;
-    div.onclick = ()=> showStudentDetail(s.name, sessions);
+    div.className = 'student-item';
+    div.innerHTML = `
+      <h4>${s.name}</h4>
+      <span>ทดสอบแล้ว: ${sessions.length} ครั้ง</span>
+      <span>คะแนนสูงสุด: <strong>${best}/8 ท่า</strong></span>`;
+    div.onclick = () => showStudentDetail(s.name, sessions);
     wrap.appendChild(div);
   }
 }
-function showStudentDetail(name, sessions){
+
+function showStudentDetail(name, sessions) {
   const el = document.getElementById('dashDetail');
-  sessions = sessions.slice().sort((a,b)=> new Date(a.date)-new Date(b.date));
-  let rows = sessions.map((s,i)=>{
-    const pct = Math.round(s.score/8*100);
+  sessions = sessions.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+  let rows = sessions.map((s, i) => {
+    const pct = Math.round(s.score / 8 * 100);
     return `<tr>
-      <td>ครั้งที่ ${i+1}</td>
+      <td>รอบที่ ${i + 1}</td>
       <td>${new Date(s.date).toLocaleString('th-TH')}</td>
-      <td>${s.score}/8</td>
-      <td>${s.timeUsed} วิ</td>
+      <td><strong>${s.score}/8</strong></td>
+      <td>${s.timeUsed} วินาที</td>
       <td><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div></td>
     </tr>`;
   }).join('');
+
   el.innerHTML = `
-    <div class="flourish"><div class="line"></div><span style="color:var(--maroon-dark); font-family:'Chonburi'">${name}</span><div class="line"></div></div>
+    <div class="flourish">
+      <div class="line"></div>
+      <span style="color:var(--maroon-dark); font-family:'Chonburi'">${name}</span>
+      <div class="line"></div>
+    </div>
     <table class="hist">
-      <thead><tr><th>รอบ</th><th>วันเวลา</th><th>คะแนน</th><th>เวลาที่ใช้</th><th>พัฒนาการ</th></tr></thead>
+      <thead><tr><th>รอบ</th><th>วันเวลาที่ทดสอบ</th><th>คะแนนปฏิบัติ</th><th>เวลาที่ใช้</th><th>ระดับพัฒนาการ</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
 }
 
 /* ---------------------------------------------------------------
-   STUDENT GAME
+   STUDENT GAME LOGIC
 --------------------------------------------------------------- */
-let studentName='', queue=[], results={}, currentIdx=0, timeLeft=GAME_SECONDS, timerHandle=null;
-let gameLoopActive=false, gameVideoEl, latestSegResults=null, holdCounter=0, gameStartTs=0;
+let studentName = '', queue = [], results = {}, currentIdx = 0, timeLeft = GAME_SECONDS, timerHandle = null;
+let gameLoopActive = false, gameVideoEl = null, latestSegResults = null, holdCounter = 0;
 
-document.getElementById('btnStart').onclick = async ()=>{
+document.getElementById('btnStartGame').onclick = async () => {
   const name = document.getElementById('studentName').value.trim();
-  if(!name){ alert('กรุณาพิมพ์ชื่อก่อนเริ่มเล่น'); return; }
+  if (!name) { alert('กรุณากรอกชื่อ-นามสกุลก่อนเริ่มการทดสอบ'); return; }
   studentName = name;
   await ensureAudio();
   await startGame();
 };
 
-async function startGame(){
-  queue = POSES.filter(p=>poseRefs[p.id]).map(p=>p.id);
-  if(queue.length===0){ alert('ยังไม่มีภาพอ้างอิงจากครู'); show('screen-home'); return; }
-  results = {}; queue.forEach(id=>results[id]='pending');
+async function startGame() {
+  queue = POSES.filter(p => poseRefs[p.id]).map(p => p.id);
+  if (queue.length === 0) { alert('ยังไม่มีภาพอ้างอิงจากครูผู้สอน'); showScreen('screen-home'); return; }
+  
+  results = {}; queue.forEach(id => results[id] = 'pending');
   currentIdx = 0;
   timeLeft = GAME_SECONDS;
   renderProgressDots();
   updateTimerDisplay();
-  show('screen-game');
+  showScreen('screen-game');
+  
   gameVideoEl = document.getElementById('gameVideo');
-  document.getElementById('gameStatus').textContent = 'กำลังเปิดกล้อง…';
-  try{
+  document.getElementById('gameStatus').textContent = 'กำลังเปิดกล้อง...';
+  try {
     await startCamera(gameVideoEl);
-  }catch(e){
-    document.getElementById('gameStatus').textContent = 'เปิดกล้องไม่สำเร็จ: '+e.message;
+  } catch (e) {
+    document.getElementById('gameStatus').textContent = 'ไม่สามารถเปิดกล้องได้: ' + e.message;
     return;
   }
+
   const model = getSegModel();
-  model.onResults((r)=>{ latestSegResults = r; document.getElementById('gameDot').classList.add('ready'); document.getElementById('gameStatus').textContent='กำลังตรวจจับ…'; });
+  model.onResults((r) => {
+    latestSegResults = r;
+    document.getElementById('gameDot').classList.add('ready');
+    document.getElementById('gameStatus').textContent = 'ระบบกำลังประมวลผลท่าทาง...';
+  });
+
   gameLoopActive = true;
-  gameStartTs = Date.now();
   loadCurrentPoseUI();
   startMusic();
   timerHandle = setInterval(tickTimer, 1000);
   gameLoop();
   document.getElementById('btnStopTimer').disabled = true;
 }
-async function gameLoop(){
-  if(!gameLoopActive) return;
+
+async function gameLoop() {
+  if (!gameLoopActive) return;
   const model = getSegModel();
-  if(gameVideoEl.readyState>=2){
-    await model.send({image:gameVideoEl});
+  if (gameVideoEl && gameVideoEl.readyState >= 2) {
+    await model.send({ image: gameVideoEl });
     evaluateFrame();
   }
-  if(gameLoopActive) requestAnimationFrame(gameLoop);
+  if (gameLoopActive) requestAnimationFrame(gameLoop);
 }
-function evaluateFrame(){
-  if(!latestSegResults) return;
+
+function evaluateFrame() {
+  if (!latestSegResults) return;
   const poseId = queue[currentIdx];
-  if(!poseId || results[poseId]==='correct') return;
+  if (!poseId || results[poseId] === 'correct') return;
   const ref = poseRefs[poseId];
-  if(!ref) return;
+  if (!ref) return;
+
   const w = gameVideoEl.videoWidth, h = gameVideoEl.videoHeight;
   const liveGrid = maskToGrid(latestSegResults.segmentationMask, w, h);
   const refGrid = stringToGrid(ref.grid);
   const score = iou(liveGrid, refGrid);
-  document.getElementById('matchFill').style.width = Math.min(100,Math.round(score/MATCH_THRESHOLD*100))+'%';
-  if(score >= MATCH_THRESHOLD){
+  
+  const pct = Math.min(100, Math.round(score / MATCH_THRESHOLD * 100));
+  document.getElementById('matchFill').style.width = pct + '%';
+  document.getElementById('matchText').textContent = `ความตรงกับภาพต้นฉบับ: ${pct}% (เกณฑ์ผ่าน: 100%)`;
+
+  if (score >= MATCH_THRESHOLD) {
     holdCounter++;
-    if(holdCounter >= HOLD_FRAMES){
+    if (holdCounter >= HOLD_FRAMES) {
       markCorrect(poseId);
     }
   } else {
-    holdCounter = Math.max(0, holdCounter-1);
+    holdCounter = Math.max(0, holdCounter - 1);
   }
 }
-function loadCurrentPoseUI(){
+
+/* Student Controls for Overlay Mode & Opacity */
+const overlayImgEl = document.getElementById('gameOverlay');
+const overlayModeSelect = document.getElementById('overlayModeSelect');
+const opacitySlider = document.getElementById('opacitySlider');
+const opacityVal = document.getElementById('opacityVal');
+
+overlayModeSelect.onchange = updateOverlayStyle;
+opacitySlider.oninput = () => {
+  opacityVal.textContent = opacitySlider.value + '%';
+  updateOverlayStyle();
+};
+
+function updateOverlayStyle() {
   const poseId = queue[currentIdx];
   const ref = poseRefs[poseId];
-  const idxInAll = POSES.findIndex(p=>p.id===poseId);
-  document.getElementById('gameNum').textContent = 'ท่าที่ '+(idxInAll+1)+' จาก 8';
+  if (!ref) return;
+  
+  const mode = overlayModeSelect.value;
+  overlayImgEl.className = 'overlay-img mode-' + mode;
+  overlayImgEl.style.opacity = opacitySlider.value / 100;
+  
+  if (mode === 'original' && ref.originalImg) {
+    overlayImgEl.src = ref.originalImg;
+  } else {
+    overlayImgEl.src = ref.thumb;
+  }
+}
+
+function loadCurrentPoseUI() {
+  const poseId = queue[currentIdx];
+  const ref = poseRefs[poseId];
+  const idxInAll = POSES.findIndex(p => p.id === poseId);
+  
+  document.getElementById('gameNum').textContent = `ท่าที่ ${idxInAll + 1} จาก 8`;
   document.getElementById('gameName').textContent = ref.name;
-  document.getElementById('gameOverlay').src = ref.thumb;
-  document.getElementById('matchFill').style.width='0%';
+  updateOverlayStyle();
+
+  document.getElementById('matchFill').style.width = '0%';
+  document.getElementById('matchText').textContent = 'ความตรงกับภาพต้นฉบับ: 0%';
   holdCounter = 0;
   renderProgressDots();
 }
-function renderProgressDots(){
+
+function renderProgressDots() {
   const wrap = document.getElementById('progressDots');
-  wrap.innerHTML='';
-  POSES.forEach((p,i)=>{
-    if(!poseRefs[p.id]) return;
+  wrap.innerHTML = '';
+  POSES.forEach((p, i) => {
+    if (!poseRefs[p.id]) return;
     const st = results[p.id] || 'pending';
     const d = document.createElement('div');
-    d.className = 'pdot'+(st==='correct'?' correct':st==='skipped'?' skipped':'')+(queue[currentIdx]===p.id?' current':'');
-    d.textContent = st==='correct' ? '✓' : (i+1);
+    d.className = 'pdot' + (st === 'correct' ? ' correct' : st === 'skipped' ? ' skipped' : '') + (queue[currentIdx] === p.id ? ' current' : '');
+    d.textContent = st === 'correct' ? '✓' : (i + 1);
     wrap.appendChild(d);
   });
 }
-function markCorrect(poseId){
-  results[poseId]='correct';
+
+function markCorrect(poseId) {
+  results[poseId] = 'correct';
   playCorrect();
   const cm = document.getElementById('checkmark');
   cm.classList.add('show');
-  setTimeout(()=>cm.classList.remove('show'), 700);
-  setTimeout(()=> advance(), 550);
+  setTimeout(() => cm.classList.remove('show'), 700);
+  setTimeout(() => advance(), 550);
 }
-function advance(){
-  // remove current from queue, check if all done
-  queue.splice(currentIdx,1);
-  if(queue.length===0){
+
+function advance() {
+  queue.splice(currentIdx, 1);
+  if (queue.length === 0) {
     finishGame();
     return;
   }
-  if(currentIdx >= queue.length) currentIdx = 0;
+  if (currentIdx >= queue.length) currentIdx = 0;
   loadCurrentPoseUI();
-  document.getElementById('btnStopTimer').disabled = !Object.values(results).every(v=>v==='correct');
+  document.getElementById('btnStopTimer').disabled = !Object.values(results).every(v => v === 'correct');
 }
-document.getElementById('btnSkip').onclick = ()=>{
+
+document.getElementById('btnSkip').onclick = () => {
   const poseId = queue[currentIdx];
-  if(!poseId) return;
-  if(results[poseId]!=='correct') results[poseId]='skipped';
+  if (!poseId) return;
+  if (results[poseId] !== 'correct') results[poseId] = 'skipped';
   playSkip();
-  queue.push(queue.splice(currentIdx,1)[0]);
-  if(currentIdx >= queue.length) currentIdx = 0;
+  queue.push(queue.splice(currentIdx, 1)[0]);
+  if (currentIdx >= queue.length) currentIdx = 0;
   loadCurrentPoseUI();
 };
-function tickTimer(){
+
+function tickTimer() {
   timeLeft--;
   updateTimerDisplay();
-  if(timeLeft<=0){ finishGame(); }
+  if (timeLeft <= 0) finishGame();
 }
-function updateTimerDisplay(){
-  const box = document.getElementById('timerBox');
-  box.textContent = timeLeft;
-  box.classList.toggle('low', timeLeft<=20);
-}
-document.getElementById('btnStopTimer').onclick = ()=> finishGame();
 
-async function finishGame(){
-  if(!gameLoopActive) return;
-  gameLoopActive=false;
+function updateTimerDisplay() {
+  const box = document.getElementById('timerBox');
+  box.textContent = '⏱ ' + timeLeft;
+  box.classList.toggle('low', timeLeft <= 20);
+}
+
+document.getElementById('btnStopTimer').onclick = () => finishGame();
+
+async function finishGame() {
+  if (!gameLoopActive) return;
+  gameLoopActive = false;
   clearInterval(timerHandle);
   stopMusic();
   stopStream(gameVideoEl);
-  const correctCount = Object.values(results).filter(v=>v==='correct').length;
-  const timeUsed = GAME_SECONDS - Math.max(0,timeLeft);
-  if(Object.values(results).every(v=>v==='correct')) playFanfare();
-  document.getElementById('resScore').textContent = correctCount+'/'+Object.keys(results).length;
-  document.getElementById('resTime').textContent = 'เวลาที่ใช้: '+timeUsed+' วินาที';
+
+  const correctCount = Object.values(results).filter(v => v === 'correct').length;
+  const timeUsed = GAME_SECONDS - Math.max(0, timeLeft);
+  
+  if (Object.values(results).every(v => v === 'correct')) playFanfare();
+
+  document.getElementById('resScore').textContent = `${correctCount}/${Object.keys(results).length}`;
+  document.getElementById('resTime').textContent = `เวลาที่ใช้รวม: ${timeUsed} วินาที`;
+
+  // Simpson Level Evaluation Feedback
+  let simpsonText = "";
+  if (correctCount === 8) {
+    simpsonText = "🌟 **ระดับยอดเยี่ยม (Complex Overt Response)**: นักเรียนมีความพร้อมและปฏิบัติท่าทางนาฏยศัพท์ได้ถูกต้องแม่นยำทุกท่าอย่างคล่องแคล่ว";
+  } else if (correctCount >= 5) {
+    simpsonText = "👍 **ระดับดี (Mechanism)**: นักเรียนปฏิบัติท่าทางส่วนใหญ่ได้ถูกต้อง เริ่มเกิดทักษะกลไกการเคลื่อนไหวที่ดี";
+  } else {
+    simpsonText = "💡 **ระดับกำลังพัฒนา (Guided Response)**: แนะนำให้ทบทวนสังเกตภาพต้นฉบับของครูและฝึกซ้อมเพิ่มเติม";
+  }
+  document.getElementById('resEvaluation').innerHTML = simpsonText;
+
   await appendStudentSession(studentName, {
     date: new Date().toISOString(),
     score: correctCount,
     total: Object.keys(results).length,
     timeUsed
   });
-  show('screen-result');
+
+  showScreen('screen-result');
 }
-document.getElementById('btnReplay').onclick = async ()=>{ await ensureAudio(); await startGame(); };
+
+document.getElementById('btnReplay').onclick = async () => { await ensureAudio(); await startGame(); };
 
 /* ---------------------------------------------------------------
-   INIT
+   INIT ON LOAD
 --------------------------------------------------------------- */
-(async ()=>{
+(async () => {
   await loadRefs();
 })();
 </script>
