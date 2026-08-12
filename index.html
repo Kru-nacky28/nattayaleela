@@ -197,8 +197,10 @@ h1, h2, h3, .display { font-family: 'Chonburi', cursive; font-weight: 400; lette
 
 .overlay-img {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none;
-  opacity: 0.65; transition: opacity 0.15s; mix-blend-mode: multiply; filter: drop-shadow(0 0 8px rgba(0,0,0,0.5));
+  opacity: 0.70; transition: opacity 0.15s;
 }
+.overlay-img.mode-original { mix-blend-mode: normal; filter: drop-shadow(0 0 10px rgba(0,0,0,0.6)); }
+.overlay-img.mode-silhouette { mix-blend-mode: multiply; filter: drop-shadow(0 0 8px rgba(0,0,0,0.5)); }
 
 .status-pill {
   position: absolute; top: 14px; left: 14px; background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
@@ -329,7 +331,7 @@ table.hist th { background: var(--maroon); color: #fff; font-weight: 600; font-f
     <div class="row" style="justify-content:space-between; margin-top:0;">
       <div>
         <h2 style="color:var(--maroon-dark); margin:0;">จัดการภาพต้นฉบับนาฏยศัพท์ 8 ท่า</h2>
-        <p class="hint" style="margin:4px 0 0;">อัปโหลดไฟล์ภาพต้นฉบับ ระบบจะสแกนพิกัดสร้างภาพเงาดำให้อัตโนมัติ</p>
+        <p class="hint" style="margin:4px 0 0;">อัปโหลดไฟล์ภาพต้นฉบับ ระบบจะสแกนพิกัดสร้างภาพอ้างอิงให้อัตโนมัติ</p>
       </div>
       <button class="btn btn-gold" id="btnGoDashboard">📊 ดูรายงานผลนักเรียน</button>
     </div>
@@ -384,7 +386,7 @@ table.hist th { background: var(--maroon); color: #fff; font-weight: 600; font-f
         <div class="upload-box" id="dropZone">
           <span class="up-icon">📤</span>
           <p><strong>คลิกเพื่อเลือกไฟล์ภาพ</strong> หรือ ลากไฟล์มาวางที่นี่</p>
-          <span class="hint">รองรับทั้งภาพถ่ายและภาพเงาสีดำ ระบบสแกนและประมวลผลพิกัดให้อัตโนมัติ</span>
+          <span class="hint">รองรับภาพถ่ายของคุณครู ระบบสแกนและประมวลผลพิกัดให้อัตโนมัติ</span>
           <input type="file" id="singleFileInput" accept="image/*" style="display:none;">
         </div>
       </div>
@@ -433,7 +435,7 @@ table.hist th { background: var(--maroon); color: #fff; font-weight: 600; font-f
     <div class="login-card">
       <div style="font-size:48px; margin-bottom:10px;">💃</div>
       <h2 style="margin:0; color:var(--maroon-dark)">เข้าสู่เกมทดสอบปฏิบัติ</h2>
-      <p class="hint">จัดวางร่างกายหน้าจอ (คอมพิวเตอร์ โน้ตบุค ไอแพด มือถือ) ให้ทาบตรงกับเงาภาพต้นฉบับ</p>
+      <p class="hint">จัดวางร่างกายหน้าจอ (คอมพิวเตอร์ โน้ตบุค ไอแพด มือถือ) ให้ทาบตรงกับภาพต้นฉบับ</p>
       <input type="text" id="studentName" placeholder="เช่น เด็กชายสรวิชญ์ ปัญญาดี เลขที่ 1">
       <div class="row" style="justify-content:center;">
         <button class="btn btn-primary" id="btnStartGame">🎬 เริ่มเล่นเกม (240 วินาที)</button>
@@ -456,8 +458,8 @@ table.hist th { background: var(--maroon); color: #fff; font-weight: 600; font-f
     <div class="stage-wrap">
       <div class="camera-box" id="cameraBox">
         <video id="gameVideo" autoplay playsinline webkit-playsinline muted></video>
-        <!-- Overlay Layer -->
-        <img class="overlay-img mode-silhouette" id="gameOverlay">
+        <!-- Overlay Original Photo Layer by Default -->
+        <img class="overlay-img mode-original" id="gameOverlay">
         
         <div class="status-pill">
           <span class="dot" id="gameDot"></span>
@@ -478,15 +480,15 @@ table.hist th { background: var(--maroon); color: #fff; font-weight: 600; font-f
       <label>
         รูปแบบภาพซ้อน:
         <select id="overlayModeSelect" style="padding:6px 12px; border-radius:10px; border:1px solid #c8b8a4; font-family:'Sarabun'; font-size:13px; font-weight:700;">
+          <option value="original" selected>🖼 ภาพถ่ายครูจริง (Original Photo)</option>
           <option value="silhouette">👥 ภาพเงาดำต้นฉบับ (Black Silhouette)</option>
-          <option value="original">🖼 ภาพถ่ายครูจริง (Original Photo)</option>
         </select>
       </label>
 
       <label>
         ความโปร่งแสง:
-        <input type="range" id="opacitySlider" min="10" max="90" value="65">
-        <span id="opacityVal">65%</span>
+        <input type="range" id="opacitySlider" min="10" max="90" value="70">
+        <span id="opacityVal">70%</span>
       </label>
     </div>
 
@@ -953,8 +955,8 @@ function tintCanvas(alphaCanvas, color) {
   return c;
 }
 
-// DILATED MATCHING FOR LARGER/SMALLER STUDENT BODY SIZES
-function getDilatedGrid(grid, radius = 3) {
+// ULTRA-SENSITIVE & SIZE-FLEXIBLE DILATED POSE MATCHING (RADIUS 4 FOR GUARANTEED PASSING)
+function getDilatedGrid(grid, radius = 4) {
   const out = new Uint8Array(GRID_W * GRID_H);
   for (let y = 0; y < GRID_H; y++) {
     for (let x = 0; x < GRID_W; x++) {
@@ -977,7 +979,8 @@ function evaluatePoseAccuracy(liveGrid, refGrid) {
   let refActiveCount = 0;
   let overlapCount = 0;
 
-  const dilatedRef = getDilatedGrid(refGrid, 3);
+  // Use 4-pixel radius dilation for high flexibility on student body sizes & camera distances
+  const dilatedRef = getDilatedGrid(refGrid, 4);
 
   for (let i = 0; i < liveGrid.length; i++) {
     const b = refGrid[i];
@@ -1009,7 +1012,7 @@ function renderTeacherGrid() {
     card.className = 'pose-card';
     card.innerHTML = `
       <div class="pose-thumb">
-        ${ref && (ref.thumb || ref.originalImg) ? `<img src="${ref.thumb || ref.originalImg}" alt="${p.name}">` : 'ยังไม่มีภาพต้นฉบับ'}
+        ${ref && (ref.originalImg || ref.thumb) ? `<img src="${ref.originalImg || ref.thumb}" alt="${p.name}">` : 'ยังไม่มีภาพต้นฉบับ'}
       </div>
       <div class="pose-meta">
         <div>
@@ -1301,7 +1304,7 @@ function showStudentDetail(name, sessions) {
 }
 
 /* ---------------------------------------------------------------
-   STUDENT GAME LOGIC (INSTANT PASSING & AUTOMATIC POSE ADVANCE)
+   STUDENT GAME LOGIC (ORIGINAL PHOTO OVERLAY & HIGH SENSITIVITY PASS)
 --------------------------------------------------------------- */
 let studentName = '', queue = [], results = {}, currentIdx = 0, timeLeft = GAME_SECONDS;
 let gameLoopActive = false, gameVideoEl = null, latestSegResults = null;
@@ -1392,7 +1395,7 @@ async function sendCameraFramesLoop() {
   if (gameLoopActive) requestAnimationFrame(sendCameraFramesLoop);
 }
 
-// INSTANT PASS EVALUATION AT 80%-100% RELATIVE SILHOUETTE ACCURACY (NO 5-SECOND DELAY)
+// ULTRA-SENSITIVE & RELIABLE PASSING EVALUATION FOR ORIGINAL PHOTO OVERLAY
 function evaluatePoseResult(r) {
   if (!gameLoopActive || !r) return;
   const poseId = queue[currentIdx];
@@ -1406,17 +1409,17 @@ function evaluatePoseResult(r) {
   
   const coverageScore = evaluatePoseAccuracy(liveGrid, refGrid);
   
-  // Scale score so that student's pose alignment reaches 80% - 100% nicely
-  const displayPct = Math.min(100, Math.round((coverageScore / 0.45) * 100));
+  // Map coverage score smoothly to 0% - 100% display percentage with high sensitivity
+  const displayPct = Math.min(100, Math.round((coverageScore / 0.18) * 100));
 
   const matchFill = document.getElementById('matchFill').firstElementChild;
   const matchText = document.getElementById('matchText');
 
   matchFill.style.width = displayPct + '%';
-  matchText.textContent = `ความทาบตรงกับภาพเงา: ${displayPct}% (เกณฑ์ผ่าน: 80% - 100%)`;
+  matchText.textContent = `ความทาบตรงกับภาพต้นฉบับ: ${displayPct}% (เกณฑ์ผ่าน: 80% - 100%)`;
 
-  // INSTANT PASS WHEN REACHING 80% ACCURACY! NO 5-SECOND DELAY!
-  if (displayPct >= 80 || coverageScore >= 0.36) {
+  // PASS CONDITION: Triggers as soon as student aligns body/arms over teacher's original photo!
+  if (displayPct >= 80 || coverageScore >= 0.14) {
     markCorrect(poseId);
   }
 }
@@ -1437,16 +1440,16 @@ function updateOverlayStyle() {
   const ref = poseRefs[poseId] || DEFAULT_POSE_REFS[poseId];
   if (!ref) return;
   
-  const mode = overlayModeSelect.value;
+  const mode = overlayModeSelect.value || 'original';
   overlayImgEl.className = 'overlay-img mode-' + mode;
   overlayImgEl.style.opacity = opacitySlider.value / 100;
   
-  if (mode === 'silhouette' && ref.thumb) {
-    overlayImgEl.src = ref.thumb;
-  } else if (ref.originalImg) {
+  if (mode === 'original' && ref.originalImg) {
     overlayImgEl.src = ref.originalImg;
-  } else {
+  } else if (ref.thumb) {
     overlayImgEl.src = ref.thumb;
+  } else {
+    overlayImgEl.src = ref.originalImg;
   }
 }
 
