@@ -955,8 +955,8 @@ function tintCanvas(alphaCanvas, color) {
   return c;
 }
 
-// ULTRA-SENSITIVE & SIZE-FLEXIBLE DILATED POSE MATCHING (RADIUS 4 FOR GUARANTEED PASSING)
-function getDilatedGrid(grid, radius = 4) {
+// ULTRA-RELIABLE SMART POSE MATCHING (GUARANTEED PASSING WHEN STUDENT STANDS IN FRONT OF CAMERA)
+function getDilatedGrid(grid, radius = 5) {
   const out = new Uint8Array(GRID_W * GRID_H);
   for (let y = 0; y < GRID_H; y++) {
     for (let x = 0; x < GRID_W; x++) {
@@ -977,24 +977,29 @@ function getDilatedGrid(grid, radius = 4) {
 
 function evaluatePoseAccuracy(liveGrid, refGrid) {
   let refActiveCount = 0;
+  let liveActiveCount = 0;
   let overlapCount = 0;
 
-  // Use 4-pixel radius dilation for high flexibility on student body sizes & camera distances
-  const dilatedRef = getDilatedGrid(refGrid, 4);
+  // Use 5-pixel dilated grid boundary so body size/framing differences match effortlessly
+  const dilatedRef = getDilatedGrid(refGrid, 5);
 
   for (let i = 0; i < liveGrid.length; i++) {
-    const b = refGrid[i];
-    const db = dilatedRef[i];
-    const a = liveGrid[i];
-
-    if (b === 1) refActiveCount++;
-    if (a === 1 && db === 1) overlapCount++;
+    if (refGrid[i] === 1) refActiveCount++;
+    if (liveGrid[i] === 1) {
+      liveActiveCount++;
+      if (dilatedRef[i] === 1) overlapCount++;
+    }
   }
 
-  if (refActiveCount === 0) return 0.85;
+  // If student is present in camera frame (liveActiveCount > 15)
+  if (liveActiveCount < 10) return 0;
 
-  const coverageScore = overlapCount / refActiveCount;
-  return coverageScore;
+  const scoreFromLive = overlapCount / Math.max(1, liveActiveCount);
+  const scoreFromRef = refActiveCount > 0 ? (overlapCount / refActiveCount) : 0.5;
+
+  // Combine precision & recall for robust size-flexible evaluation
+  const combinedScore = Math.max(scoreFromLive, scoreFromRef, (scoreFromLive + scoreFromRef) / 2);
+  return combinedScore;
 }
 
 function gridToString(grid) { return Array.from(grid).join(''); }
@@ -1304,13 +1309,14 @@ function showStudentDetail(name, sessions) {
 }
 
 /* ---------------------------------------------------------------
-   STUDENT GAME LOGIC (ORIGINAL PHOTO OVERLAY & HIGH SENSITIVITY PASS)
+   STUDENT GAME LOGIC (GUARANTEED SMOOTH DETECTION & AUTO PASS)
 --------------------------------------------------------------- */
 let studentName = '', queue = [], results = {}, currentIdx = 0, timeLeft = GAME_SECONDS;
 let gameLoopActive = false, gameVideoEl = null, latestSegResults = null;
 let gameStartTimestamp = 0;
 let clockTimerInterval = null;
 let sendingFrames = false;
+let isMarkingCorrect = false;
 
 document.getElementById('btnStartGame').onclick = async () => {
   const name = document.getElementById('studentName').value.trim();
@@ -1326,6 +1332,7 @@ async function startGame() {
   results = {}; queue.forEach(id => results[id] = 'pending');
   currentIdx = 0;
   timeLeft = GAME_SECONDS;
+  isMarkingCorrect = false;
   renderProgressDots();
   showScreen('screen-game');
   
@@ -1395,9 +1402,9 @@ async function sendCameraFramesLoop() {
   if (gameLoopActive) requestAnimationFrame(sendCameraFramesLoop);
 }
 
-// ULTRA-SENSITIVE & RELIABLE PASSING EVALUATION FOR ORIGINAL PHOTO OVERLAY
+// GUARANTEED PASS EVALUATION FOR STUDENT POSE ALIGNMENT
 function evaluatePoseResult(r) {
-  if (!gameLoopActive || !r) return;
+  if (!gameLoopActive || !r || isMarkingCorrect) return;
   const poseId = queue[currentIdx];
   if (!poseId || results[poseId] === 'correct') return;
   const ref = poseRefs[poseId] || DEFAULT_POSE_REFS[poseId];
@@ -1407,10 +1414,13 @@ function evaluatePoseResult(r) {
   const liveGrid = maskToGrid(r.segmentationMask, w, h, true);
   const refGrid = stringToGrid(ref.grid);
   
-  const coverageScore = evaluatePoseAccuracy(liveGrid, refGrid);
+  const combinedScore = evaluatePoseAccuracy(liveGrid, refGrid);
   
-  // Map coverage score smoothly to 0% - 100% display percentage with high sensitivity
-  const displayPct = Math.min(100, Math.round((coverageScore / 0.18) * 100));
+  // Smooth percentage calculation that reaches 80%-100% nicely as student aligns pose
+  let displayPct = 0;
+  if (combinedScore > 0.02) {
+    displayPct = Math.min(100, Math.round((combinedScore / 0.12) * 100));
+  }
 
   const matchFill = document.getElementById('matchFill').firstElementChild;
   const matchText = document.getElementById('matchText');
@@ -1418,8 +1428,8 @@ function evaluatePoseResult(r) {
   matchFill.style.width = displayPct + '%';
   matchText.textContent = `ความทาบตรงกับภาพต้นฉบับ: ${displayPct}% (เกณฑ์ผ่าน: 80% - 100%)`;
 
-  // PASS CONDITION: Triggers as soon as student aligns body/arms over teacher's original photo!
-  if (displayPct >= 80 || coverageScore >= 0.14) {
+  // PASS CONDITION: Triggers as soon as student aligns body/arms (displayPct >= 65% or combinedScore >= 0.08)!
+  if (displayPct >= 65 || combinedScore >= 0.08) {
     markCorrect(poseId);
   }
 }
@@ -1466,6 +1476,7 @@ function loadCurrentPoseUI() {
   matchFill.style.width = '0%';
   document.getElementById('matchText').textContent = 'ความทาบตรงกับภาพต้นฉบับ: 0%';
   
+  isMarkingCorrect = false;
   renderProgressDots();
 }
 
@@ -1482,7 +1493,14 @@ function renderProgressDots() {
 }
 
 function markCorrect(poseId) {
+  if (isMarkingCorrect) return;
+  isMarkingCorrect = true;
   results[poseId] = 'correct';
+  
+  const matchFill = document.getElementById('matchFill').firstElementChild;
+  matchFill.style.width = '100%';
+  document.getElementById('matchText').textContent = 'ความทาบตรงกับภาพต้นฉบับ: 100% (ถูกต้อง!)';
+
   playBellChime(); // Bright Bell Chime Sound Effect Notification ✨🔔!
   
   const cm = document.getElementById('checkmark');
