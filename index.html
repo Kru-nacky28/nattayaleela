@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>นาฏยศัพท์ส่วนมือ — ระบบเรียนรู้ตามแนวคิดของซิมพ์ซันร่วมกับ AI</title>
-<title>นาฏยรำไทย AI Challenge — เกมปฏิบัตินาฏยศัพท์ด้วย AI (ม.1)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Chonburi&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js"></script>
 <style>
 :root {
@@ -15,7 +15,7 @@
   --maroon-light: #9B2C3B;
   --gold: #C9932E;
   --gold-light: #F3E5AB;
-  --gold-hover: #E5A735;
+  --gold-hover: #e5a735;
   --teal: #0E5C56;
   --teal-light: #16857C;
   --cream: #FDF9F0;
@@ -24,11 +24,10 @@
   --gray-sub: #665752;
   --ok: #2F8F5B;
   --warn: #C64B3B;
-  --radius: 20px;
+  --radius: 16px;
   --shadow: 0 10px 30px rgba(36,21,18,0.12);
-  --shadow-lg: 0 18px 45px rgba(122,31,43,0.22);
+  --shadow-lg: 0 16px 40px rgba(36,21,18,0.2);
 }
-
 * { box-sizing: border-box; }
 body { margin: 0; }
 html, body {
@@ -36,13 +35,13 @@ html, body {
   font-family: 'Sarabun', sans-serif;
   background:
     radial-gradient(circle at 10% -10%, rgba(201,147,46,0.18), transparent 45%),
-    radial-gradient(circle at 90% 100%, rgba(14,92,86,0.2), transparent 45%),
+    radial-gradient(circle at 100% 0%, rgba(14,92,86,0.15), transparent 40%),
     var(--cream);
   color: var(--ink);
 }
-
 h1, h2, h3, .display { font-family: 'Chonburi', cursive; font-weight: 400; letter-spacing: 0.5px; }
-.app { max-width: 1050px; margin: 0 auto; padding: 16px 16px 60px; }
+.app { max-width: 1100px; margin: 0 auto; padding: 20px 18px 60px; }
+
 .screen { display: none; animation: fadein 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
 .screen.active { display: block; }
 @keyframes fadein { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
@@ -93,7 +92,7 @@ h1, h2, h3, .display { font-family: 'Chonburi', cursive; font-weight: 400; lette
   font-size: 14px; font-weight: 800; margin-bottom: 16px; box-shadow: 0 4px 14px rgba(201,147,46,0.15);
 }
 .hero-text-block h2 {
-  font-size: clamp(26px, 5.5vw, 42px); color: var(--maroon-dark); margin: 0 0 12px; line-height: 1.3;
+  font-size: clamp(24px, 5vw, 40px); color: var(--maroon-dark); margin: 0 0 12px; line-height: 1.3;
 }
 .hero-text-block p {
   color: var(--gray-sub); max-width: 680px; margin: 0 auto 20px; font-size: 15px; line-height: 1.6; font-weight: 500;
@@ -531,7 +530,7 @@ table.hist th { background: var(--maroon); color: #fff; font-weight: 600; font-f
 
     <!-- Accuracy & Progress Fill Bar -->
     <div class="match-fill"><i id="matchFill"></i></div>
-    <div style="text-align:center; font-size:13px; color:var(--maroon-dark); font-weight:700;" id="matchText">ความทาบตรงกับภาพต้นฉบับ: 0%</div>
+    <div style="text-align:center; font-size:13px; color:var(--maroon-dark); font-weight:700;" id="matchText">ระดับแขนตรงตามเงาต้นฉบับ: 0%</div>
 
     <div class="row" style="justify-content:center; margin-top:16px;">
       <button class="btn btn-ghost" id="btnSkip">⏭ ข้ามไปท่าถัดไป (Pass)</button>
@@ -678,7 +677,7 @@ async function loadStudentList() {
 
 async function saveStudentList(list) {
   const str = JSON.stringify(list);
-  try { if (window.storage && window.storage.set) await window.storage.set(key, str, true); } catch(e){}
+  try { if (window.storage && window.storage.set) await window.storage.set('student-list', str, true); } catch(e){}
   try { localStorage.setItem('student-list', str); } catch(e){}
 }
 
@@ -997,6 +996,7 @@ function stopAllCameras() {
   stopExcitingMusic();
 }
 
+// MULTI-CHANNEL PIXEL DETECTOR (R, G, B, OR ALPHA > 50)
 function maskToGrid(maskSource, srcW, srcH, flip = false) {
   const c = document.createElement('canvas');
   c.width = GRID_W; c.height = GRID_H;
@@ -1011,7 +1011,11 @@ function maskToGrid(maskSource, srcW, srcH, flip = false) {
   const data = ctx.getImageData(0, 0, GRID_W, GRID_H).data;
   const grid = new Uint8Array(GRID_W * GRID_H);
   for (let i = 0; i < grid.length; i++) {
-    grid[i] = data[i * 4] > 70 ? 1 : 0;
+    const rVal = data[i * 4];
+    const gVal = data[i * 4 + 1];
+    const bVal = data[i * 4 + 2];
+    const aVal = data[i * 4 + 3];
+    grid[i] = (rVal > 50 || gVal > 50 || bVal > 50 || aVal > 50) ? 1 : 0;
   }
   return grid;
 }
@@ -1032,7 +1036,7 @@ function renderSilhouettePNG(maskSource, srcW, srcH, flip = false) {
   const actx = alphaCanvas.getContext('2d');
   const outImg = actx.createImageData(W, H);
   for (let i = 0; i < md.data.length; i += 4) {
-    const v = md.data[i] > 70 ? 255 : 0;
+    const v = (md.data[i] > 50 || md.data[i+3] > 50) ? 255 : 0;
     outImg.data[i] = 0; outImg.data[i+1] = 0; outImg.data[i+2] = 0; outImg.data[i+3] = v;
   }
   actx.putImageData(outImg, 0, 0);
@@ -1057,8 +1061,8 @@ function tintCanvas(alphaCanvas, color) {
   return c;
 }
 
-// ULTRA-RELIABLE SMART POSE MATCHING (GUARANTEED PASSING WHEN STUDENT STANDS IN FRONT OF CAMERA)
-function getDilatedGrid(grid, radius = 5) {
+// FLEXIBLE ARM & GESTURE LEVEL OVERLAP ALGORITHM
+function getDilatedGrid(grid, radius = 8) {
   const out = new Uint8Array(GRID_W * GRID_H);
   for (let y = 0; y < GRID_H; y++) {
     for (let x = 0; x < GRID_W; x++) {
@@ -1082,7 +1086,8 @@ function evaluatePoseAccuracy(liveGrid, refGrid) {
   let liveActiveCount = 0;
   let overlapCount = 0;
 
-  const dilatedRef = getDilatedGrid(refGrid, 5);
+  // Generous 8-pixel dilation radius to accommodate any student body size
+  const dilatedRef = getDilatedGrid(refGrid, 8);
 
   for (let i = 0; i < liveGrid.length; i++) {
     if (refGrid[i] === 1) refActiveCount++;
@@ -1092,13 +1097,11 @@ function evaluatePoseAccuracy(liveGrid, refGrid) {
     }
   }
 
-  if (liveActiveCount < 10) return 0;
+  if (liveActiveCount < 5 || refActiveCount === 0) return 0;
 
-  const scoreFromLive = overlapCount / Math.max(1, liveActiveCount);
-  const scoreFromRef = refActiveCount > 0 ? (overlapCount / refActiveCount) : 0.5;
-
-  const combinedScore = Math.max(scoreFromLive, scoreFromRef, (scoreFromLive + scoreFromRef) / 2);
-  return combinedScore;
+  // Measure coverage of target pose area (does NOT penalize student body parts sticking out)
+  const armCoverageScore = overlapCount / refActiveCount;
+  return armCoverageScore;
 }
 
 function gridToString(grid) { return Array.from(grid).join(''); }
@@ -1505,12 +1508,9 @@ async function sendCameraFramesLoop() {
   if (gameLoopActive) requestAnimationFrame(sendCameraFramesLoop);
 }
 
-// GUARANTEED PASS EVALUATION AFTER 3s PREPARATION DELAY
+// ULTRA-EASY RELAXED ARM LEVEL MATCHING EVALUATION
 function evaluatePoseResult(r) {
   if (!gameLoopActive || !r || isMarkingCorrect) return;
-  
-  // Wait until 3-second preparation countdown completes!
-  if (prepCountdown > 0) return;
 
   const poseId = queue[currentIdx];
   if (!poseId || results[poseId] === 'correct') return;
@@ -1521,21 +1521,22 @@ function evaluatePoseResult(r) {
   const liveGrid = maskToGrid(r.segmentationMask, w, h, true);
   const refGrid = stringToGrid(ref.grid);
   
-  const combinedScore = evaluatePoseAccuracy(liveGrid, refGrid);
+  const coverageScore = evaluatePoseAccuracy(liveGrid, refGrid);
   
   let displayPct = 0;
-  if (combinedScore > 0.02) {
-    displayPct = Math.min(100, Math.round((combinedScore / 0.12) * 100));
+  if (coverageScore > 0.01) {
+    // Highly forgiving mapping: 35% arm area overlap = 100% displayPct!
+    displayPct = Math.min(100, Math.round((coverageScore / 0.35) * 100));
   }
 
   const matchFill = document.getElementById('matchFill').firstElementChild;
   const matchText = document.getElementById('matchText');
 
   matchFill.style.width = displayPct + '%';
-  matchText.textContent = `ความทาบตรงกับภาพต้นฉบับ: ${displayPct}% (เกณฑ์ผ่าน: 80% - 100%)`;
+  matchText.textContent = `ระดับแขนตรงตามเงาต้นฉบับ: ${displayPct}% (เกณฑ์ผ่าน: จัดวางแขนตรงตำแหน่ง)`;
 
-  // PASS CONDITION: Triggers as soon as student aligns body/arms (displayPct >= 65% or combinedScore >= 0.08)!
-  if (displayPct >= 65 || combinedScore >= 0.08) {
+  // EASY PASSING THRESHOLD: Triggers as long as arms match the pose position (displayPct >= 45% or coverageScore >= 0.15)!
+  if (displayPct >= 45 || coverageScore >= 0.15) {
     markCorrect(poseId);
   }
 }
@@ -1580,7 +1581,7 @@ function loadCurrentPoseUI() {
 
   const matchFill = document.getElementById('matchFill').firstElementChild;
   matchFill.style.width = '0%';
-  document.getElementById('matchText').textContent = 'ความทาบตรงกับภาพต้นฉบับ: 0%';
+  document.getElementById('matchText').textContent = 'ระดับแขนตรงตามเงาต้นฉบับ: 0%';
   
   isMarkingCorrect = false;
   renderProgressDots();
@@ -1624,7 +1625,7 @@ function markCorrect(poseId) {
   
   const matchFill = document.getElementById('matchFill').firstElementChild;
   matchFill.style.width = '100%';
-  document.getElementById('matchText').textContent = 'ความทาบตรงกับภาพต้นฉบับ: 100% (ถูกต้อง!)';
+  document.getElementById('matchText').textContent = 'ระดับแขนตรงตามเงาต้นฉบับ: 100% (ถูกต้อง!)';
 
   playBellChime(); // Bright Bell Chime Sound Effect Notification ✨🔔!
   
