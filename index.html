@@ -158,7 +158,7 @@ h1, h2, h3, .display { font-family: 'Chonburi', cursive; font-weight: 400; lette
 .tag.done { background: #e4f4ea; color: var(--ok); border: 1px solid #b7e4c7; }
 .tag.todo { background: #f6e6d8; color: var(--maroon); border: 1px solid #f0c3b5; }
 
-/* --- Uploader Modal --- */
+/* --- Modals --- */
 .modal-backdrop {
   position: fixed; inset: 0; background: rgba(20,10,8,0.7); backdrop-filter: blur(5px); display: none;
   align-items: center; justify-content: center; z-index: 100; padding: 16px; animation: fadein 0.2s ease;
@@ -209,6 +209,15 @@ h1, h2, h3, .display { font-family: 'Chonburi', cursive; font-weight: 400; lette
 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--warn); display: inline-block; }
 .dot.ready { background: #34d399; box-shadow: 0 0 10px #34d399; }
 
+/* Preparation Countdown Badge */
+.prep-badge {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 10;
+  background: rgba(122,31,43,0.92); color: #fff; backdrop-filter: blur(8px);
+  border: 2px solid var(--gold); padding: 8px 22px; border-radius: 999px;
+  font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 10px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4); white-space: nowrap; animation: pulse 1s infinite;
+}
+
 /* --- Student Login Card --- */
 .login-card {
   max-width: 460px; margin: 36px auto; background: var(--paper); padding: 40px 34px; border-radius: var(--radius);
@@ -256,13 +265,20 @@ h1, h2, h3, .display { font-family: 'Chonburi', cursive; font-weight: 400; lette
 .checkmark svg { width: 140px; height: 140px; opacity: 0; transform: scale(0.5); filter: drop-shadow(0 6px 16px rgba(47,143,91,0.5)); }
 .checkmark.show svg { opacity: 1; transform: scale(1); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 
-/* --- Result Card --- */
+/* --- Result Card & Score Popup --- */
 .result-card {
-  max-width: 540px; margin: 36px auto; background: var(--paper); padding: 44px 36px; border-radius: var(--radius);
-  box-shadow: var(--shadow-lg); text-align: center; border: 3px solid var(--gold);
+  max-width: 540px; margin: 36px auto; background: var(--paper); padding: 40px 36px; border-radius: var(--radius);
+  box-shadow: var(--shadow-lg); text-align: center; border: 3px solid var(--gold); position: relative;
 }
-.result-card .score { font-family: 'Chonburi'; font-size: 64px; color: var(--maroon-dark); margin: 12px 0; }
-.result-card .sub { color: var(--gray-sub); font-size: 16px; margin-bottom: 24px; }
+.result-card .score-display {
+  background: linear-gradient(135deg, #fffcf5, #f7f0e1); border: 2px solid var(--gold); border-radius: 18px;
+  padding: 20px; margin: 16px 0 24px; box-shadow: var(--shadow);
+}
+.result-card .score { font-family: 'Chonburi'; font-size: 58px; color: var(--maroon-dark); margin: 4px 0; }
+.result-card .bonus-badge {
+  display: inline-block; background: linear-gradient(135deg, var(--gold), #b37e20); color: #2d1d03;
+  padding: 6px 18px; border-radius: 999px; font-weight: 800; font-size: 14px; margin-top: 6px; box-shadow: 0 4px 12px rgba(201,147,46,0.3);
+}
 
 /* --- Dashboard --- */
 .student-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-top: 18px; }
@@ -318,10 +334,25 @@ table.hist th { background: var(--maroon); color: #fff; font-weight: 600; font-f
       <div class="role-card" id="cardTeacher">
         <span class="icon">🪷</span>
         <h3>เมนูสำหรับครูผู้สอน</h3>
+        <span style="font-size:12px; color:var(--gold); font-weight:700;">🔒 ต้องใส่รหัสผ่าน</span>
       </div>
       <div class="role-card" id="cardStudent">
         <span class="icon">💃</span>
         <h3>เมนูสำหรับนักเรียน</h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEACHER PASSWORD MODAL -->
+  <div class="modal-backdrop" id="passModal">
+    <div class="modal-card" style="max-width:400px; text-align:center;">
+      <button class="modal-close" id="btnClosePassModal">✕</button>
+      <div style="font-size:44px; margin-bottom:8px;">🔒</div>
+      <h3 style="color:var(--maroon-dark); margin-top:0;">เข้าสู่เมนูครูผู้สอน</h3>
+      <p class="hint">กรุณากรอกรหัสผ่านเพื่อเข้าใช้งานระบบจัดการภาพต้นฉบับ</p>
+      <input type="password" id="teacherPassInput" placeholder="กรอกรหัสผ่าน 4 หลัก" style="width:100%; padding:12px 16px; border-radius:12px; border:2px solid #d9c9b3; font-size:18px; text-align:center; letter-spacing:4px; margin:16px 0; font-family:'Sarabun';" maxlength="10">
+      <div class="row" style="justify-content:center;">
+        <button class="btn btn-primary" id="btnConfirmPass">🔓 เข้าสู่ระบบ</button>
       </div>
     </div>
   </div>
@@ -435,10 +466,10 @@ table.hist th { background: var(--maroon); color: #fff; font-weight: 600; font-f
     <div class="login-card">
       <div style="font-size:48px; margin-bottom:10px;">💃</div>
       <h2 style="margin:0; color:var(--maroon-dark)">เข้าสู่เกมทดสอบปฏิบัติ</h2>
-      <p class="hint">จัดวางร่างกายหน้าจอ (คอมพิวเตอร์ โน้ตบุค ไอแพด มือถือ) ให้ทาบตรงกับภาพต้นฉบับ</p>
+      <p class="hint">จัดวางร่างกายหน้าจอ (คอมพิวเตอร์ โน้ตบุค ไอแพด มือถือ) ให้ทาบตรงกับภาพต้นฉบับ (เวลา 180 วินาที)</p>
       <input type="text" id="studentName" placeholder="เช่น เด็กชายสรวิชญ์ ปัญญาดี เลขที่ 1">
       <div class="row" style="justify-content:center;">
-        <button class="btn btn-primary" id="btnStartGame">🎬 เริ่มเล่นเกม (240 วินาที)</button>
+        <button class="btn btn-primary" id="btnStartGame">🎬 เริ่มเล่นเกม (180 วินาที)</button>
       </div>
     </div>
   </div>
@@ -447,7 +478,7 @@ table.hist th { background: var(--maroon); color: #fff; font-weight: 600; font-f
   <div class="screen" id="screen-game">
     <div class="game-top">
       <div class="progress-dots" id="progressDots"></div>
-      <div class="timerbox" id="timerBox">⏱ 240</div>
+      <div class="timerbox" id="timerBox">⏱ 180</div>
     </div>
 
     <div class="pose-current">
@@ -464,6 +495,11 @@ table.hist th { background: var(--maroon); color: #fff; font-weight: 600; font-f
         <div class="status-pill">
           <span class="dot" id="gameDot"></span>
           <span id="gameStatus">กำลังเตรียมความพร้อม AI…</span>
+        </div>
+
+        <!-- Preparation Delay Badge (3s countdown) -->
+        <div class="prep-badge" id="prepBadge" style="display:none;">
+          <span>⏳ เตรียมตัวจัดท่าทาง... (เริ่มตรวจใน <strong id="prepSec">3</strong>s)</span>
         </div>
 
         <div class="checkmark" id="checkmark">
@@ -505,9 +541,16 @@ table.hist th { background: var(--maroon); color: #fff; font-weight: 600; font-f
   <!-- RESULT SCREEN -->
   <div class="screen" id="screen-result">
     <div class="result-card">
-      <div style="font-size:56px; margin-bottom:8px;">🏆</div>
+      <div style="font-size:56px; margin-bottom:4px;">🎉🏆✨</div>
       <h2 style="margin:0; color:var(--maroon-dark);">ผลการทดสอบปฏิบัตินาฏยศัพท์</h2>
-      <div class="score" id="resScore">0/8</div>
+      
+      <div class="score-display">
+        <div style="font-size:14px; color:var(--gray-sub); font-weight:700;">คะแนนการปฏิบัตินาฏยศัพท์รวม</div>
+        <div class="score" id="resTotalPoints">100</div>
+        <div style="font-size:15px; color:var(--maroon); font-weight:800;" id="resBasePoints">คะแนนท่าทาง: 80 คะแนน (8/8 ท่า)</div>
+        <div class="bonus-badge" id="resBonusBadge">⚡ โบนัสความเร็วพิเศษ: +20 คะแนน</div>
+      </div>
+
       <div class="sub" id="resTime">เวลาที่ใช้รวม: 0 วินาที</div>
       <div class="row" style="justify-content:center;">
         <button class="btn btn-primary" id="btnReplay">🔁 เล่นอีกครั้ง</button>
@@ -520,7 +563,7 @@ table.hist th { background: var(--maroon); color: #fff; font-weight: 600; font-f
 
 <script>
 /* ---------------------------------------------------------------
-   POSES & CONFIGURATION
+   POSES & CONFIGURATION (180s TIMER & 3s PREP DELAY)
 --------------------------------------------------------------- */
 const POSES = [
   { id: 'p1', name: 'ตั้งวงบน' },
@@ -534,7 +577,9 @@ const POSES = [
 ];
 
 const GRID_W = 40, GRID_H = 30;
-const GAME_SECONDS = 240; // 240 seconds total game duration
+const GAME_SECONDS = 180;          // Total Game Timer = 180 seconds!
+const PREP_DELAY_SECONDS = 3;      // 3 Seconds Delay before AI starts pose detection!
+const TEACHER_PIN = '2568';         // Teacher Password PIN
 
 let poseRefs = {};
 
@@ -668,6 +713,37 @@ async function appendStudentSession(name, session) {
 }
 
 /* ---------------------------------------------------------------
+   TEACHER PASSWORD PROTECTION MODAL (PIN: 2568)
+--------------------------------------------------------------- */
+document.getElementById('cardTeacher').onclick = () => {
+  document.getElementById('teacherPassInput').value = '';
+  document.getElementById('passModal').classList.add('active');
+  setTimeout(() => document.getElementById('teacherPassInput').focus(), 150);
+};
+
+document.getElementById('btnClosePassModal').onclick = () => {
+  document.getElementById('passModal').classList.remove('active');
+};
+
+document.getElementById('btnConfirmPass').onclick = checkTeacherPassword;
+document.getElementById('teacherPassInput').onkeyup = (e) => {
+  if (e.key === 'Enter') checkTeacherPassword();
+};
+
+function checkTeacherPassword() {
+  const input = document.getElementById('teacherPassInput').value.trim();
+  if (input === TEACHER_PIN) {
+    document.getElementById('passModal').classList.remove('active');
+    loadRefs().then(() => renderTeacherGrid());
+    showScreen('screen-teacher');
+  } else {
+    alert('🔒 รหัสผ่านไม่ถูกต้อง! (เฉพาะครูผู้สอนเท่านั้น)');
+    document.getElementById('teacherPassInput').value = '';
+    document.getElementById('teacherPassInput').focus();
+  }
+}
+
+/* ---------------------------------------------------------------
    DATA EXPORT & IMPORT UTILITIES
 --------------------------------------------------------------- */
 document.getElementById('btnExportData').onclick = () => {
@@ -711,11 +787,6 @@ function showScreen(id) {
 document.getElementById('btnHome').onclick = () => { stopAllCameras(); showScreen('screen-home'); };
 document.getElementById('btnHome2').onclick = () => { stopAllCameras(); showScreen('screen-home'); };
 
-document.getElementById('cardTeacher').onclick = () => {
-  loadRefs().then(() => renderTeacherGrid());
-  showScreen('screen-teacher');
-};
-
 document.getElementById('cardStudent').onclick = () => {
   loadRefs();
   showScreen('screen-login');
@@ -725,7 +796,7 @@ document.getElementById('btnGoDashboard').onclick = () => { openDashboard(); };
 document.getElementById('btnBackTeacher').onclick = () => { showScreen('screen-teacher'); };
 
 /* ---------------------------------------------------------------
-   GUARANTEED WEB AUDIO SYNTHESIZER & BELL CHIME
+   GUARANTEED WEB AUDIO SYNTHESIZER & VICTORY FANFARE MELODY
 --------------------------------------------------------------- */
 let audioCtx = null;
 let bgMusicInterval = null;
@@ -811,6 +882,36 @@ function playBellChime() {
       gain.connect(audioCtx.destination);
       osc.start(audioCtx.currentTime + idx * 0.08);
       osc.stop(audioCtx.currentTime + idx * 0.08 + 1.2);
+    });
+  } catch(e){}
+}
+
+// Triumphant Victory Fanfare Melody (เสียงดนตรีแสดงความยินดี 🎉🎺)
+function playVictoryFanfare() {
+  unlockAudio();
+  if (!soundEnabled || !audioCtx || audioCtx.state !== 'running') return;
+  try {
+    const melody = [
+      { f: 523.25, d: 0.18 }, // C5
+      { f: 659.25, d: 0.18 }, // E5
+      { f: 783.99, d: 0.18 }, // G5
+      { f: 1046.50, d: 0.35 },// C6
+      { f: 880.00, d: 0.18 }, // A5
+      { f: 1046.50, d: 0.60 } // C6
+    ];
+    let now = audioCtx.currentTime;
+    melody.forEach(note => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(note.f, now);
+      gain.gain.setValueAtTime(0.4, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + note.d);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + note.d);
+      now += note.d * 0.9;
     });
   } catch(e){}
 }
@@ -980,7 +1081,6 @@ function evaluatePoseAccuracy(liveGrid, refGrid) {
   let liveActiveCount = 0;
   let overlapCount = 0;
 
-  // Use 5-pixel dilated grid boundary so body size/framing differences match effortlessly
   const dilatedRef = getDilatedGrid(refGrid, 5);
 
   for (let i = 0; i < liveGrid.length; i++) {
@@ -991,13 +1091,11 @@ function evaluatePoseAccuracy(liveGrid, refGrid) {
     }
   }
 
-  // If student is present in camera frame (liveActiveCount > 15)
   if (liveActiveCount < 10) return 0;
 
   const scoreFromLive = overlapCount / Math.max(1, liveActiveCount);
   const scoreFromRef = refActiveCount > 0 ? (overlapCount / refActiveCount) : 0.5;
 
-  // Combine precision & recall for robust size-flexible evaluation
   const combinedScore = Math.max(scoreFromLive, scoreFromRef, (scoreFromLive + scoreFromRef) / 2);
   return combinedScore;
 }
@@ -1270,13 +1368,13 @@ async function openDashboard() {
   wrap.innerHTML = '';
   for (const s of list) {
     const sessions = await loadStudentSessions(s.name);
-    const best = sessions.reduce((m, x) => Math.max(m, x.score), 0);
+    const bestScore = sessions.reduce((m, x) => Math.max(m, (x.totalScore !== undefined ? x.totalScore : x.score * 10)), 0);
     const div = document.createElement('div');
     div.className = 'student-item';
     div.innerHTML = `
       <h4>${s.name}</h4>
       <span>เข้าเล่นเกมแล้ว: ${sessions.length} ครั้ง</span>
-      <span>คะแนนสูงสุด: <strong>${best}/8 ท่า</strong></span>`;
+      <span>คะแนนสูงสุด: <strong>${bestScore} คะแนน</strong></span>`;
     div.onclick = () => showStudentDetail(s.name, sessions);
     wrap.appendChild(div);
   }
@@ -1286,11 +1384,12 @@ function showStudentDetail(name, sessions) {
   const el = document.getElementById('dashDetail');
   sessions = sessions.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
   let rows = sessions.map((s, i) => {
-    const pct = Math.round(s.score / 8 * 100);
+    const totScore = s.totalScore !== undefined ? s.totalScore : (s.score * 10);
+    const pct = Math.min(100, Math.round(totScore / 100 * 100));
     return `<tr>
       <td>รอบที่ ${i + 1}</td>
       <td>${new Date(s.date).toLocaleString('th-TH')}</td>
-      <td><strong>${s.score}/8</strong></td>
+      <td><strong>${totScore} คะแนน</strong> (${s.score}/8 ท่า)</td>
       <td>${s.timeUsed} วินาที</td>
       <td><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div></td>
     </tr>`;
@@ -1309,7 +1408,7 @@ function showStudentDetail(name, sessions) {
 }
 
 /* ---------------------------------------------------------------
-   STUDENT GAME LOGIC (GUARANTEED SMOOTH DETECTION & AUTO PASS)
+   STUDENT GAME LOGIC (180s TIMER, 3s PREP DELAY, SCORING & BONUSES)
 --------------------------------------------------------------- */
 let studentName = '', queue = [], results = {}, currentIdx = 0, timeLeft = GAME_SECONDS;
 let gameLoopActive = false, gameVideoEl = null, latestSegResults = null;
@@ -1317,6 +1416,9 @@ let gameStartTimestamp = 0;
 let clockTimerInterval = null;
 let sendingFrames = false;
 let isMarkingCorrect = false;
+
+let prepCountdown = PREP_DELAY_SECONDS;
+let prepTimerInterval = null;
 
 document.getElementById('btnStartGame').onclick = async () => {
   const name = document.getElementById('studentName').value.trim();
@@ -1336,7 +1438,7 @@ async function startGame() {
   renderProgressDots();
   showScreen('screen-game');
   
-  // 1. GUARANTEED CLOCK TIMER
+  // 1. GUARANTEED 180s CLOCK TIMER
   clearInterval(clockTimerInterval);
   gameStartTimestamp = Date.now();
   updateTimerUI();
@@ -1402,9 +1504,13 @@ async function sendCameraFramesLoop() {
   if (gameLoopActive) requestAnimationFrame(sendCameraFramesLoop);
 }
 
-// GUARANTEED PASS EVALUATION FOR STUDENT POSE ALIGNMENT
+// GUARANTEED PASS EVALUATION AFTER 3s PREPARATION DELAY
 function evaluatePoseResult(r) {
   if (!gameLoopActive || !r || isMarkingCorrect) return;
+  
+  // Wait until 3-second preparation countdown completes!
+  if (prepCountdown > 0) return;
+
   const poseId = queue[currentIdx];
   if (!poseId || results[poseId] === 'correct') return;
   const ref = poseRefs[poseId] || DEFAULT_POSE_REFS[poseId];
@@ -1416,7 +1522,6 @@ function evaluatePoseResult(r) {
   
   const combinedScore = evaluatePoseAccuracy(liveGrid, refGrid);
   
-  // Smooth percentage calculation that reaches 80%-100% nicely as student aligns pose
   let displayPct = 0;
   if (combinedScore > 0.02) {
     displayPct = Math.min(100, Math.round((combinedScore / 0.12) * 100));
@@ -1478,6 +1583,25 @@ function loadCurrentPoseUI() {
   
   isMarkingCorrect = false;
   renderProgressDots();
+
+  // START 3-SECOND PREPARATION COUNTDOWN
+  clearInterval(prepTimerInterval);
+  prepCountdown = PREP_DELAY_SECONDS;
+  const prepBadge = document.getElementById('prepBadge');
+  const prepSec = document.getElementById('prepSec');
+  
+  prepBadge.style.display = 'flex';
+  prepSec.textContent = prepCountdown;
+
+  prepTimerInterval = setInterval(() => {
+    prepCountdown--;
+    if (prepCountdown > 0) {
+      prepSec.textContent = prepCountdown;
+    } else {
+      clearInterval(prepTimerInterval);
+      prepBadge.style.display = 'none';
+    }
+  }, 1000);
 }
 
 function renderProgressDots() {
@@ -1539,21 +1663,52 @@ async function finishGame() {
   if (!gameLoopActive) return;
   gameLoopActive = false;
   clearInterval(clockTimerInterval);
+  clearInterval(prepTimerInterval);
   stopExcitingMusic();
   stopStream(gameVideoEl);
 
   const correctCount = Object.values(results).filter(v => v === 'correct').length;
   const timeUsed = GAME_SECONDS - Math.max(0, timeLeft);
   
-  if (Object.values(results).every(v => v === 'correct')) playBellChime();
+  // SCORING SYSTEM: 10 Points per correct pose (max 80 base points)
+  const basePoints = correctCount * 10;
+  let bonusPoints = 0;
 
-  document.getElementById('resScore').textContent = `${correctCount}/${Object.keys(results).length}`;
+  // TIME BONUS SYSTEM (For 8/8 full completion)
+  if (correctCount === Object.keys(results).length) {
+    if (timeUsed <= 60) {
+      bonusPoints = 20; // +20 Points Bonus within 60s
+    } else if (timeUsed <= 120) {
+      bonusPoints = 10; // +10 Points Bonus within 120s
+    }
+  }
+
+  const totalScore = basePoints + bonusPoints;
+
+  // PLAY TRIUMPHANT VICTORY FANFARE MELODY ✨🎉🎺
+  playVictoryFanfare();
+
+  // DISPLAY POPUP SCORE NOTIFICATION
+  document.getElementById('resTotalPoints').textContent = `${totalScore} คะแนน`;
+  document.getElementById('resBasePoints').textContent = `คะแนนท่าทาง: ${basePoints} คะแนน (${correctCount}/8 ท่า)`;
+  
+  const bonusBadge = document.getElementById('resBonusBadge');
+  if (bonusPoints > 0) {
+    bonusBadge.style.display = 'inline-block';
+    bonusBadge.textContent = `⚡ โบนัสความเร็วพิเศษ: +${bonusPoints} คะแนน!`;
+  } else {
+    bonusBadge.style.display = 'none';
+  }
+
   document.getElementById('resTime').textContent = `เวลาที่ใช้รวม: ${timeUsed} วินาที`;
 
   await appendStudentSession(studentName, {
     date: new Date().toISOString(),
     score: correctCount,
     total: Object.keys(results).length,
+    basePoints,
+    bonusPoints,
+    totalScore,
     timeUsed
   });
 
