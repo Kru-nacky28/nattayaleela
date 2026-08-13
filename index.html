@@ -174,22 +174,25 @@
   </div>
 
   <!-- TEACHER MODE MODALS -->
-  <!-- 1. Passcode Input Modal -->
+  <!-- 1. Passcode Input Modal (Form wrapped for Mobile Keyboard submit) -->
   <div id="modal-teacher-pass" class="modal-backdrop">
     <div class="modal-box" style="max-width: 420px; text-align: center;">
       <div class="modal-header">
         <h2>🔒 เข้าสู่โหมดครู (Teacher Mode)</h2>
-        <button id="btn-close-pass-modal" class="btn-close">&times;</button>
+        <button id="btn-close-pass-modal" type="button" class="btn-close">&times;</button>
       </div>
-      <p style="font-size: 0.9rem; color: #E0D0E0; margin-bottom: 20px;">
+      <p style="font-size: 0.95rem; color: #E0D0E0; margin-bottom: 20px;">
         กรอกรหัสผ่านเพื่อเข้าสู่ระบบจัดการและอัปโหลดภาพท่าต้นฉบับ
       </p>
-      <div class="input-group">
-        <input type="password" id="input-teacher-pass" class="input-control" placeholder="กรอกรหัสผ่าน 4 หลัก" maxlength="4" style="text-align: center; letter-spacing: 6px; font-size: 1.5rem;" />
-      </div>
-      <button id="btn-submit-pass" class="btn-gold" style="width: 100%; justify-content: center; font-size: 1.1rem; padding: 12px;">
-        ยืนยันรหัสผ่าน
-      </button>
+      
+      <form id="form-teacher-pass" onsubmit="event.preventDefault(); window.app.verifyTeacherPassword();">
+        <div class="input-group">
+          <input type="tel" id="input-teacher-pass" class="input-control" placeholder="2569" maxlength="4" pattern="[0-9]*" inputmode="numeric" autocomplete="off" style="text-align: center; letter-spacing: 8px; font-size: 1.8rem; font-weight: 700;" />
+        </div>
+        <button type="submit" id="btn-submit-pass" class="btn-gold" style="width: 100%; justify-content: center; font-size: 1.15rem; padding: 14px; margin-top: 10px;">
+          🔑 ยืนยันรหัสผ่าน (2569)
+        </button>
+      </form>
     </div>
   </div>
 
@@ -198,11 +201,16 @@
     <div class="modal-box">
       <div class="modal-header">
         <h2>⚙️ โหมดครูผู้สอน - จัดการภาพท่าต้นฉบับ</h2>
-        <button id="btn-close-dashboard-modal" class="btn-close">&times;</button>
+        <button id="btn-close-dashboard-modal" type="button" class="btn-close">&times;</button>
       </div>
-      <p style="font-size: 0.9rem; color: #E0D0E0;">
-        ครูสามารถอัปโหลดภาพถ่าย หรือภาพวาดท่าต้นฉบับของตนเอง บันทึกไว้เป็นท่าเป้าหมายสำหรับนักเรียนได้
-      </p>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
+        <p style="font-size: 0.9rem; color: #E0D0E0; margin: 0;">
+          ครูสามารถอัปโหลดภาพถ่าย หรือภาพวาดท่าต้นฉบับของตนเอง บันทึกไว้เป็นท่าเป้าหมายสำหรับนักเรียนได้ (ระบบย่อขนาดภาพให้อัตโนมัติ)
+        </p>
+        <button type="button" class="btn-gold" style="padding: 6px 14px; font-size: 0.82rem; background: linear-gradient(135deg, #FF5252 0%, #C62828 100%); color: #FFF;" onclick="window.app.handleTeacherResetAllImages()">
+          🗑️ ล้างไฟล์ภาพที่อัปโหลดทั้งหมด
+        </button>
+      </div>
 
       <div id="teacher-posture-list" class="teacher-posture-list">
         <!-- Generated dynamically via app.js -->
