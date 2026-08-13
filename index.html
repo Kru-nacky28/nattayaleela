@@ -583,16 +583,88 @@ const TEACHER_PIN = '2568';         // Teacher Password PIN
 
 let poseRefs = {};
 
-function buildDefaultGrid(poseId) {
-  const gridArr = new Uint8Array(1200);
-  for (let y = 0; y < 30; y++) {
-    for (let x = 0; x < 40; x++) {
-      const idx = y * 40 + x;
-      if (y >= 4 && y <= 14 && (x >= 8 && x <= 32)) gridArr[idx] = 1;
-      if (y >= 8 && y <= 22 && (x >= 15 && x <= 25)) gridArr[idx] = 1;
+function buildPresetGrid(poseId) {
+  const grid = new Uint8Array(GRID_W * GRID_H);
+  
+  // Base body shape (Head & Torso in center)
+  for (let y = 14; y < 30; y++) {
+    for (let x = 14; x <= 25; x++) {
+      grid[y * GRID_W + x] = 1;
     }
   }
-  return Array.from(gridArr).join('');
+  for (let y = 5; y < 14; y++) {
+    for (let x = 16; x <= 23; x++) {
+      grid[y * GRID_W + x] = 1;
+    }
+  }
+
+  // Pose-specific arm structures
+  switch(poseId) {
+    case 'p1': // ตั้งวงบน: แขนโค้งยกสูงระดับศีรษะ/คิ้ว
+      for (let y = 2; y <= 14; y++) {
+        for (let x = 4; x <= 14; x++) grid[y * GRID_W + x] = 1;
+        for (let x = 25; x <= 35; x++) grid[y * GRID_W + x] = 1;
+      }
+      for (let x = 7; x <= 32; x++) {
+        grid[2 * GRID_W + x] = 1; grid[3 * GRID_W + x] = 1;
+      }
+      break;
+
+    case 'p2': // ตั้งวงกลาง: แขนโค้งกางออกระดับไหล่
+      for (let y = 7; y <= 18; y++) {
+        for (let x = 2; x <= 13; x++) grid[y * GRID_W + x] = 1;
+        for (let x = 26; x <= 37; x++) grid[y * GRID_W + x] = 1;
+      }
+      break;
+
+    case 'p3': // ตั้งวงล่าง: แขนโค้งต่ำระดับหน้าท้อง/เอว
+      for (let y = 13; y <= 24; y++) {
+        for (let x = 5; x <= 14; x++) grid[y * GRID_W + x] = 1;
+        for (let x = 25; x <= 34; x++) grid[y * GRID_W + x] = 1;
+      }
+      for (let x = 9; x <= 30; x++) {
+        grid[21 * GRID_W + x] = 1; grid[22 * GRID_W + x] = 1;
+      }
+      break;
+
+    case 'p4': // จีบคว่ำ: แขนยื่นคว่ำมือระดับอก/เอว
+      for (let y = 11; y <= 21; y++) {
+        for (let x = 7; x <= 32; x++) grid[y * GRID_W + x] = 1;
+      }
+      break;
+
+    case 'p5': // จีบหงาย: แขนยื่นหงายมือระดับอก/เอว
+      for (let y = 11; y <= 22; y++) {
+        for (let x = 9; x <= 30; x++) grid[y * GRID_W + x] = 1;
+      }
+      break;
+
+    case 'p6': // จีบปรกข้าง: จีบตั้งข้างศีรษะ/ขมับ
+      for (let y = 3; y <= 14; y++) {
+        for (let x = 8; x <= 16; x++) grid[y * GRID_W + x] = 1;
+        for (let x = 23; x <= 31; x++) grid[y * GRID_W + x] = 1;
+      }
+      break;
+
+    case 'p7': // จีบส่งหลัง: แขนตึงส่งไปด้านหลังลำตัว
+      for (let y = 11; y <= 26; y++) {
+        for (let x = 2; x <= 13; x++) grid[y * GRID_W + x] = 1;
+        for (let x = 26; x <= 37; x++) grid[y * GRID_W + x] = 1;
+      }
+      break;
+
+    case 'p8': // จีบล่อแก้ว: จีบนิ้วระดับอก/หน้า
+      for (let y = 7; y <= 19; y++) {
+        for (let x = 10; x <= 29; x++) grid[y * GRID_W + x] = 1;
+      }
+      break;
+
+    default:
+      for (let y = 5; y <= 22; y++) {
+        for (let x = 7; x <= 32; x++) grid[y * GRID_W + x] = 1;
+      }
+  }
+  return Array.from(grid).join('');
 }
 
 const DEFAULT_POSE_REFS = {};
@@ -601,7 +673,7 @@ POSES.forEach(p => {
     name: p.name,
     originalImg: '',
     thumb: '',
-    grid: buildDefaultGrid(p.id)
+    grid: buildPresetGrid(p.id)
   };
 });
 
@@ -996,11 +1068,12 @@ function stopAllCameras() {
   stopExcitingMusic();
 }
 
-// MULTI-CHANNEL PIXEL DETECTOR (R, G, B, OR ALPHA > 50)
+// MULTI-CHANNEL PIXEL DETECTOR (R, G, B, OR ALPHA > 30)
 function maskToGrid(maskSource, srcW, srcH, flip = false) {
   const c = document.createElement('canvas');
   c.width = GRID_W; c.height = GRID_H;
   const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, GRID_W, GRID_H);
   ctx.save();
   if (flip) {
     ctx.translate(GRID_W, 0); ctx.scale(-1, 1);
@@ -1015,7 +1088,7 @@ function maskToGrid(maskSource, srcW, srcH, flip = false) {
     const gVal = data[i * 4 + 1];
     const bVal = data[i * 4 + 2];
     const aVal = data[i * 4 + 3];
-    grid[i] = (rVal > 50 || gVal > 50 || bVal > 50 || aVal > 50) ? 1 : 0;
+    grid[i] = (rVal > 30 || gVal > 30 || bVal > 30 || aVal > 30) ? 1 : 0;
   }
   return grid;
 }
@@ -1036,7 +1109,7 @@ function renderSilhouettePNG(maskSource, srcW, srcH, flip = false) {
   const actx = alphaCanvas.getContext('2d');
   const outImg = actx.createImageData(W, H);
   for (let i = 0; i < md.data.length; i += 4) {
-    const v = (md.data[i] > 50 || md.data[i+3] > 50) ? 255 : 0;
+    const v = (md.data[i] > 30 || md.data[i+3] > 30) ? 255 : 0;
     outImg.data[i] = 0; outImg.data[i+1] = 0; outImg.data[i+2] = 0; outImg.data[i+3] = v;
   }
   actx.putImageData(outImg, 0, 0);
@@ -1062,7 +1135,7 @@ function tintCanvas(alphaCanvas, color) {
 }
 
 // FLEXIBLE ARM & GESTURE LEVEL OVERLAP ALGORITHM
-function getDilatedGrid(grid, radius = 8) {
+function getDilatedGrid(grid, radius = 7) {
   const out = new Uint8Array(GRID_W * GRID_H);
   for (let y = 0; y < GRID_H; y++) {
     for (let x = 0; x < GRID_W; x++) {
@@ -1086,8 +1159,8 @@ function evaluatePoseAccuracy(liveGrid, refGrid) {
   let liveActiveCount = 0;
   let overlapCount = 0;
 
-  // Generous 8-pixel dilation radius to accommodate any student body size
-  const dilatedRef = getDilatedGrid(refGrid, 8);
+  // Generous 7-pixel dilation radius to accommodate any student body size & camera distance
+  const dilatedRef = getDilatedGrid(refGrid, 7);
 
   for (let i = 0; i < liveGrid.length; i++) {
     if (refGrid[i] === 1) refActiveCount++;
@@ -1099,8 +1172,12 @@ function evaluatePoseAccuracy(liveGrid, refGrid) {
 
   if (liveActiveCount < 5 || refActiveCount === 0) return 0;
 
-  // Measure coverage of target pose area (does NOT penalize student body parts sticking out)
-  const armCoverageScore = overlapCount / refActiveCount;
+  // Measure coverage relative to BOTH target pose and student body
+  const refCoverage = overlapCount / refActiveCount;
+  const livePrecision = overlapCount / liveActiveCount;
+
+  // Smart combined accuracy score
+  const armCoverageScore = Math.max(refCoverage, (refCoverage * 0.7 + livePrecision * 0.3));
   return armCoverageScore;
 }
 
@@ -1235,14 +1312,19 @@ function updateModalPreviews(results, imgSource) {
 
   const origCanvas = document.createElement('canvas'); origCanvas.width = w; origCanvas.height = h;
   const octx = origCanvas.getContext('2d');
-  if (isFlipped) {
+
+  // Live camera stream is displayed mirrored (CSS scaleX(-1)), so we flip it to match screen view
+  const isVideo = (imgSource instanceof HTMLVideoElement);
+  const shouldFlip = isVideo ? !isFlipped : isFlipped;
+
+  if (shouldFlip) {
     octx.translate(w, 0); octx.scale(-1, 1);
   }
   octx.drawImage(imgSource, 0, 0, w, h);
   const displayOriginalDataURL = origCanvas.toDataURL('image/jpeg', 0.75);
 
-  const grid = maskToGrid(results.segmentationMask, w, h, isFlipped);
-  const silhouettePNG = renderSilhouettePNG(results.segmentationMask, w, h, isFlipped);
+  const grid = maskToGrid(results.segmentationMask, w, h, shouldFlip);
+  const silhouettePNG = renderSilhouettePNG(results.segmentationMask, w, h, shouldFlip);
 
   currentOriginalDataURL = displayOriginalDataURL;
   currentProcessedGrid = gridToString(grid);
@@ -1518,6 +1600,7 @@ function evaluatePoseResult(r) {
   if (!ref) return;
 
   const w = gameVideoEl.videoWidth || 640, h = gameVideoEl.videoHeight || 480;
+  // Webcam is displayed mirrored on screen (CSS scaleX(-1)), so flip=true matches user view
   const liveGrid = maskToGrid(r.segmentationMask, w, h, true);
   const refGrid = stringToGrid(ref.grid);
   
@@ -1525,8 +1608,8 @@ function evaluatePoseResult(r) {
   
   let displayPct = 0;
   if (coverageScore > 0.01) {
-    // Highly forgiving mapping: 35% arm area overlap = 100% displayPct!
-    displayPct = Math.min(100, Math.round((coverageScore / 0.35) * 100));
+    // Ultra-forgiving mapping: 20% overlap coverage = 100% displayPct!
+    displayPct = Math.min(100, Math.round((coverageScore / 0.20) * 100));
   }
 
   const matchFill = document.getElementById('matchFill').firstElementChild;
@@ -1535,8 +1618,8 @@ function evaluatePoseResult(r) {
   matchFill.style.width = displayPct + '%';
   matchText.textContent = `ระดับแขนตรงตามเงาต้นฉบับ: ${displayPct}% (เกณฑ์ผ่าน: จัดวางแขนตรงตำแหน่ง)`;
 
-  // EASY PASSING THRESHOLD: Triggers as long as arms match the pose position (displayPct >= 45% or coverageScore >= 0.15)!
-  if (displayPct >= 45 || coverageScore >= 0.15) {
+  // EASY PASSING THRESHOLD: Triggers as long as arms match position (displayPct >= 35% or coverageScore >= 0.07)!
+  if (displayPct >= 35 || coverageScore >= 0.07) {
     markCorrect(poseId);
   }
 }
