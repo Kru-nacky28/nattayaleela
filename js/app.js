@@ -57,6 +57,7 @@ class GameApp {
     this.holdText = document.getElementById('hold-text');
     this.successPopModal = document.getElementById('success-pop-modal');
     this.coinRainContainer = document.getElementById('coin-rain-container');
+    this.scanLaserLine = document.getElementById('scan-laser-line');
 
     // Summary Score Elements
     this.summaryTotalScore = document.getElementById('summary-total-score');
@@ -246,6 +247,8 @@ class GameApp {
 
     // Evaluate Posture Hold Progress (3 Seconds Delay System)
     if (evaluation && evaluation.isMatched) {
+      if (this.scanLaserLine) this.scanLaserLine.classList.add('scanning-active');
+
       if (!this.holdStartTime) {
         this.holdStartTime = Date.now();
       }
@@ -260,12 +263,13 @@ class GameApp {
 
       this.updateHoldUI(this.holdProgress, evaluation.message);
 
-      // Check if held for full 3 seconds
+      // Check if held for full 3 seconds delay
       if (elapsed >= this.REQUIRED_HOLD_MS) {
         this.triggerPostureSuccess();
       }
     } else {
       // Pose lost or inaccurate - reset hold timer
+      if (this.scanLaserLine) this.scanLaserLine.classList.remove('scanning-active');
       this.resetHoldProgress();
       if (evaluation && evaluation.message) {
         if (this.holdText) this.holdText.textContent = evaluation.message;
@@ -276,7 +280,8 @@ class GameApp {
   resetHoldProgress() {
     this.holdStartTime = null;
     this.holdProgress = 0;
-    this.updateHoldUI(0, 'จัดเงาลางๆ ของตนเอง ทาบกับเงาสีดำต้นฉบับ');
+    if (this.scanLaserLine) this.scanLaserLine.classList.remove('scanning-active');
+    this.updateHoldUI(0, 'จัดเงาลางๆ ของตนเอง ทาบกับเงาลางๆ ต้นฉบับ');
   }
 
   updateHoldUI(percent, text) {
@@ -286,9 +291,9 @@ class GameApp {
     if (this.holdText) {
       if (percent > 0) {
         const secondsRemaining = Math.ceil((this.REQUIRED_HOLD_MS - (percent / 100 * this.REQUIRED_HOLD_MS)) / 1000);
-        this.holdText.textContent = `กำลังนิ่งตรงท่า... ถือค้างไว้อีก ${secondsRemaining} วินาที`;
+        this.holdText.textContent = `แสกนทาบเงาถูกต้อง... ถือค้างไว้อีก ${secondsRemaining} วินาที`;
       } else {
-        this.holdText.textContent = text || 'จัดเงาลางๆ ของตนเอง ทาบกับเงาสีดำต้นฉบับ';
+        this.holdText.textContent = text || 'จัดเงาลางๆ ของตนเอง ทาบกับเงาลางๆ ต้นฉบับ';
       }
     }
   }
