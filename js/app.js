@@ -36,6 +36,7 @@ class GameApp {
     this.btnStartGame = document.getElementById('btn-start-game');
     this.btnTeacherMode = document.getElementById('btn-teacher-mode');
     this.btnToggleSound = document.getElementById('btn-toggle-sound');
+    this.btnSwitchCamera = document.getElementById('btn-switch-camera');
     this.btnSkip = document.getElementById('btn-skip');
     this.btnPlayAgain = document.getElementById('btn-play-again');
 
@@ -78,6 +79,20 @@ class GameApp {
     // Start Game
     if (this.btnStartGame) {
       this.btnStartGame.addEventListener('click', () => this.startGame());
+    }
+
+    // Switch Camera Front/Back
+    if (this.btnSwitchCamera) {
+      this.btnSwitchCamera.addEventListener('click', async () => {
+        window.soundEngine.playClick();
+        const settings = window.teacherStore.getSettings();
+        const newMode = settings.facingMode === 'user' ? 'environment' : 'user';
+        window.teacherStore.saveSettings({ facingMode: newMode });
+
+        if (window.poseDetector && this.videoElement) {
+          await window.poseDetector.startCamera(this.videoElement);
+        }
+      });
     }
 
     // Enter Key on Student Input

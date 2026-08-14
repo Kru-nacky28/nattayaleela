@@ -60,8 +60,28 @@ class PoseDetector {
       }
 
       // 3. Setup Camera Stream
-      if (window.Camera && videoElement) {
-        const settings = window.teacherStore ? window.teacherStore.getSettings() : { facingMode: 'user' };
+      await this.startCamera(videoElement);
+    } catch (err) {
+      console.error('Error starting MediaPipe Camera:', err);
+    }
+  }
+
+  async startCamera(videoElement) {
+    if (!videoElement) return;
+
+    const settings = window.teacherStore ? window.teacherStore.getSettings() : { facingMode: 'user' };
+    const mode = settings.facingMode || 'user';
+
+    // Apply proper mirroring for front camera vs rear camera
+    videoElement.style.transform = mode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+
+    try {
+      // 1. Try MediaPipe Camera utils wrapper
+      if (window.Camera) {
+        if (this.camera) {
+          try { await this.camera.stop(); } catch(e){}
+        }
+
         this.camera = new window.Camera(videoElement, {
           onFrame: async () => {
             if (this.pose) await this.pose.send({ image: videoElement });
@@ -69,13 +89,45 @@ class PoseDetector {
           },
           width: 640,
           height: 480,
-          facingMode: settings.facingMode || 'user'
+          facingMode: mode
         });
         await this.camera.start();
         this.isReady = true;
+        return true;
+      }
+    } catch (e) {
+      console.warn('MediaPipe camera wrapper failed, using native getUserMedia fallback...', e);
+    }
+
+    // 2. Native getUserMedia fallback
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: mode,
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          },
+          audio: false
+        });
+        videoElement.srcObject = stream;
+        await videoElement.play();
+
+        const processFrame = async () => {
+          if (videoElement.readyState >= 2) {
+            if (this.pose) await this.pose.send({ image: videoElement });
+            if (this.hands) await this.hands.send({ image: videoElement });
+          }
+          if (this.isReady) requestAnimationFrame(processFrame);
+        };
+        this.isReady = true;
+        processFrame();
+        return true;
       }
     } catch (err) {
-      console.error('Error starting MediaPipe Camera:', err);
+      console.error('Camera permission denied or camera not found:', err);
+      alert('ไม่สามารถเปิดใช้งานกล้องได้ กรุณากดอนุญาต (Allow) สิทธิ์การเข้าถึงกล้องในเว็บเบราว์เซอร์');
+      return false;
     }
   }
 
