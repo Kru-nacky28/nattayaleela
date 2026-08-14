@@ -48,6 +48,7 @@ class GameApp {
 
     // Status Texts
     this.timerText = document.getElementById('timer-text');
+    this.scoreText = document.getElementById('score-text');
     this.progressText = document.getElementById('progress-text');
     this.targetNameText = document.getElementById('target-name-text');
     this.targetLevelText = document.getElementById('target-level-text');
@@ -55,6 +56,12 @@ class GameApp {
     this.holdProgressBar = document.getElementById('hold-progress-bar');
     this.holdText = document.getElementById('hold-text');
     this.successPopModal = document.getElementById('success-pop-modal');
+    this.coinRainContainer = document.getElementById('coin-rain-container');
+
+    // Summary Score Elements
+    this.summaryTotalScore = document.getElementById('summary-total-score');
+    this.summaryBaseScore = document.getElementById('summary-base-score');
+    this.summaryBonusScore = document.getElementById('summary-bonus-score');
 
     // Teacher Modal
     this.modalTeacherPass = document.getElementById('modal-teacher-pass');
@@ -163,8 +170,11 @@ class GameApp {
     this.studentName = name;
     this.completedCount = 0;
     this.skippedCount = 0;
+    this.currentScore = 0; // Initialize score to 0
     this.timeLeft = 180;
     this.isSuccessState = false;
+
+    if (this.scoreText) this.scoreText.textContent = '0';
 
     // Build Queue of 8 Natayasapt postures
     const allPostures = window.teacherStore.getPostures();
@@ -266,7 +276,7 @@ class GameApp {
   resetHoldProgress() {
     this.holdStartTime = null;
     this.holdProgress = 0;
-    this.updateHoldUI(0, 'จัดร่างกายให้ตรงกับเงาต้นฉบับ');
+    this.updateHoldUI(0, 'จัดเงาลางๆ ของตนเอง ทาบกับเงาสีดำต้นฉบับ');
   }
 
   updateHoldUI(percent, text) {
@@ -278,7 +288,7 @@ class GameApp {
         const secondsRemaining = Math.ceil((this.REQUIRED_HOLD_MS - (percent / 100 * this.REQUIRED_HOLD_MS)) / 1000);
         this.holdText.textContent = `กำลังนิ่งตรงท่า... ถือค้างไว้อีก ${secondsRemaining} วินาที`;
       } else {
-        this.holdText.textContent = text || 'จัดร่างกายให้ตรงกับเงาต้นฉบับ';
+        this.holdText.textContent = text || 'จัดเงาลางๆ ของตนเอง ทาบกับเงาสีดำต้นฉบับ';
       }
     }
   }
@@ -288,8 +298,16 @@ class GameApp {
     if (this.isSuccessState) return;
     this.isSuccessState = true;
 
-    // Sound effect bell chime
+    // Add +5 points per posture
+    this.currentScore += 5;
+    if (this.scoreText) this.scoreText.textContent = String(this.currentScore);
+
+    // Sound effect bell chime & 5-baht coin sound
     window.soundEngine.playBell();
+    window.soundEngine.playCoinSound();
+
+    // Spawn 5-Baht Coins Rain animation
+    this.spawn5BahtCoinsRain();
 
     // Show big green checkmark pop-up modal
     if (this.successPopModal) {
@@ -306,6 +324,34 @@ class GameApp {
       this.postureQueue.shift(); // Remove completed posture from queue
       this.loadNextPostureInQueue();
     }, 1200);
+  }
+
+  // Spawns ~16 falling 5-Baht coins across the video viewport
+  spawn5BahtCoinsRain() {
+    if (!this.coinRainContainer) return;
+    this.coinRainContainer.innerHTML = '';
+
+    const coinCount = 16;
+    for (let i = 0; i < coinCount; i++) {
+      const coin = document.createElement('div');
+      coin.className = 'coin-particle';
+      coin.textContent = '5฿';
+
+      const leftPos = Math.random() * 92 + 4; // 4% to 96% width
+      const delay = Math.random() * 0.8; // 0 to 0.8s stagger
+      const duration = 1.2 + Math.random() * 0.8; // 1.2s to 2s fall speed
+
+      coin.style.left = `${leftPos}%`;
+      coin.style.animationDelay = `${delay}s`;
+      coin.style.animationDuration = `${duration}s`;
+
+      this.coinRainContainer.appendChild(coin);
+    }
+
+    // Clean up coin elements after animation completes
+    setTimeout(() => {
+      if (this.coinRainContainer) this.coinRainContainer.innerHTML = '';
+    }, 2800);
   }
 
   // --- 180 Seconds Game Countdown ---
@@ -337,6 +383,27 @@ class GameApp {
     const minutesUsed = Math.floor(timeUsed / 60);
     const secondsUsed = timeUsed % 60;
 
+    // Base score: 5 points per completed posture
+    const baseScore = this.completedCount * 5;
+
+    // Speed Bonus Score Calculation:
+    // All 8 postures completed <= 60s -> +20 bonus points
+    // All 8 postures completed <= 120s -> +10 bonus points
+    let bonusScore = 0;
+    let bonusText = '+0 คะแนน';
+
+    if (this.completedCount === 8) {
+      if (timeUsed <= 60) {
+        bonusScore = 20;
+        bonusText = '+20 คะแนน (โบนัสพิเศษ: ทำเสร็จเร็วภายใน 60 วินาที! 🚀)';
+      } else if (timeUsed <= 120) {
+        bonusScore = 10;
+        bonusText = '+10 คะแนน (โบนัสพิเศษ: ทำเสร็จเร็วภายใน 120 วินาที! ⚡)';
+      }
+    }
+
+    const totalNetScore = baseScore + bonusScore;
+
     // Update Summary Screen UI
     const summaryName = document.getElementById('summary-student-name');
     const summaryCompleted = document.getElementById('summary-completed');
@@ -347,8 +414,15 @@ class GameApp {
     if (summaryCompleted) summaryCompleted.textContent = `${this.completedCount} / 8 ท่า`;
     if (summaryTime) summaryTime.textContent = `${minutesUsed} นาที ${secondsUsed} วินาที`;
 
+    if (this.summaryTotalScore) this.summaryTotalScore.textContent = String(totalNetScore);
+    if (this.summaryBaseScore) this.summaryBaseScore.textContent = `${baseScore} คะแนน (${this.completedCount} ท่า x 5 คะแนน)`;
+    if (this.summaryBonusScore) this.summaryBonusScore.textContent = bonusText;
+
     if (summaryBadge) {
-      if (this.completedCount === 8) {
+      if (this.completedCount === 8 && bonusScore === 20) {
+        summaryBadge.textContent = '🏆 ระดับผลการประเมิน: ยอดเยี่ยมระดับเหรียญทองดิบ (ผ่านเกณฑ์ PA 100% + โบนัสความเร็ว 20 คะแนน!)';
+        summaryBadge.style.color = '#00E676';
+      } else if (this.completedCount === 8) {
         summaryBadge.textContent = '🏆 ระดับผลการประเมิน: ดีเยี่ยม (ผ่านเกณฑ์ PA 100%)';
         summaryBadge.style.color = '#00E676';
       } else if (this.completedCount >= 5) {

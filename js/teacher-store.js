@@ -224,141 +224,151 @@ class TeacherStore {
     }
   }
 
-  // Generate elegant Thai Classical Dance Silhouette SVG Data URIs as default reference images
+  // Generate elegant Thai Classical Dance Silhouette SVG Data URIs as default reference images (Solid Black Silhouette)
   generateDefaultSVG(type) {
     let path = '';
-    const goldColor = '#D4AF37';
-    const bodyColor = 'rgba(212, 175, 55, 0.75)';
+    const goldColor = '#FFD700';
+    const bodyColor = '#000000'; // Pure Solid Black Shadow Silhouette
 
     switch(type) {
       case 'tang_wong_bon':
         // High Circle: Arms curved up, hands near head top/eyebrow level
         path = `
           <!-- Head -->
-          <circle cx="200" cy="110" r="35" fill="${goldColor}"/>
+          <circle cx="200" cy="110" r="35" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
           <!-- Crown/Chada -->
-          <polygon points="200,45 185,90 215,90" fill="${goldColor}"/>
+          <polygon points="200,45 185,90 215,90" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
           <!-- Torso -->
-          <path d="M 165 150 L 235 150 L 220 280 L 180 280 Z" fill="${bodyColor}"/>
+          <path d="M 165 150 L 235 150 L 220 280 L 180 280 Z" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
           <!-- Arms Tang Wong Bon -->
-          <path d="M 165 155 C 100 130 90 70 160 70" stroke="${goldColor}" stroke-width="18" fill="none" stroke-linecap="round"/>
-          <path d="M 235 155 C 300 130 310 70 240 70" stroke="${goldColor}" stroke-width="18" fill="none" stroke-linecap="round"/>
+          <path d="M 165 155 C 100 130 90 70 160 70" stroke="${bodyColor}" stroke-width="22" fill="none" stroke-linecap="round"/>
+          <path d="M 165 155 C 100 130 90 70 160 70" stroke="${goldColor}" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M 235 155 C 300 130 310 70 240 70" stroke="${bodyColor}" stroke-width="22" fill="none" stroke-linecap="round"/>
+          <path d="M 235 155 C 300 130 310 70 240 70" stroke="${goldColor}" stroke-width="3" fill="none" stroke-linecap="round"/>
           <!-- Hands fanned up -->
-          <circle cx="160" cy="68" r="14" fill="${goldColor}"/>
-          <circle cx="240" cy="68" r="14" fill="${goldColor}"/>
+          <circle cx="160" cy="68" r="14" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <circle cx="240" cy="68" r="14" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
         `;
         break;
 
       case 'tang_wong_klang':
         // Middle Circle: Arms curved out at shoulder level
         path = `
-          <circle cx="200" cy="110" r="35" fill="${goldColor}"/>
-          <polygon points="200,45 185,90 215,90" fill="${goldColor}"/>
-          <path d="M 165 150 L 235 150 L 220 280 L 180 280 Z" fill="${bodyColor}"/>
+          <circle cx="200" cy="110" r="35" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <polygon points="200,45 185,90 215,90" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <path d="M 165 150 L 235 150 L 220 280 L 180 280 Z" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
           <!-- Arms Tang Wong Klang -->
-          <path d="M 165 160 C 80 160 70 120 110 120" stroke="${goldColor}" stroke-width="18" fill="none" stroke-linecap="round"/>
-          <path d="M 235 160 C 320 160 330 120 290 120" stroke="${goldColor}" stroke-width="18" fill="none" stroke-linecap="round"/>
-          <circle cx="110" cy="118" r="14" fill="${goldColor}"/>
-          <circle cx="290" cy="118" r="14" fill="${goldColor}"/>
+          <path d="M 165 160 C 80 160 70 120 110 120" stroke="${bodyColor}" stroke-width="22" fill="none" stroke-linecap="round"/>
+          <path d="M 165 160 C 80 160 70 120 110 120" stroke="${goldColor}" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M 235 160 C 320 160 330 120 290 120" stroke="${bodyColor}" stroke-width="22" fill="none" stroke-linecap="round"/>
+          <path d="M 235 160 C 320 160 330 120 290 120" stroke="${goldColor}" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <circle cx="110" cy="118" r="14" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <circle cx="290" cy="118" r="14" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
         `;
         break;
 
       case 'tang_wong_lang':
         // Low Circle: Arms curved down in front of abdomen
         path = `
-          <circle cx="200" cy="110" r="35" fill="${goldColor}"/>
-          <polygon points="200,45 185,90 215,90" fill="${goldColor}"/>
-          <path d="M 165 150 L 235 150 L 220 280 L 180 280 Z" fill="${bodyColor}"/>
+          <circle cx="200" cy="110" r="35" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <polygon points="200,45 185,90 215,90" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <path d="M 165 150 L 235 150 L 220 280 L 180 280 Z" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
           <!-- Arms Tang Wong Lang -->
-          <path d="M 165 160 C 110 210 150 250 180 240" stroke="${goldColor}" stroke-width="18" fill="none" stroke-linecap="round"/>
-          <path d="M 235 160 C 290 210 250 250 220 240" stroke="${goldColor}" stroke-width="18" fill="none" stroke-linecap="round"/>
-          <circle cx="180" cy="240" r="13" fill="${goldColor}"/>
-          <circle cx="220" cy="240" r="13" fill="${goldColor}"/>
+          <path d="M 165 160 C 110 210 150 250 180 240" stroke="${bodyColor}" stroke-width="22" fill="none" stroke-linecap="round"/>
+          <path d="M 165 160 C 110 210 150 250 180 240" stroke="${goldColor}" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M 235 160 C 290 210 250 250 220 240" stroke="${bodyColor}" stroke-width="22" fill="none" stroke-linecap="round"/>
+          <path d="M 235 160 C 290 210 250 250 220 240" stroke="${goldColor}" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <circle cx="180" cy="240" r="13" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <circle cx="220" cy="240" r="13" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
         `;
         break;
 
       case 'jeeb_khwam':
         // Jeeb Khwam: Pinch gesture turned downwards
         path = `
-          <circle cx="200" cy="110" r="35" fill="${goldColor}"/>
-          <polygon points="200,45 185,90 215,90" fill="${goldColor}"/>
-          <path d="M 165 150 L 235 150 L 220 280 L 180 280 Z" fill="${bodyColor}"/>
-          <!-- Arm forward bent down -->
-          <path d="M 165 160 L 110 180 L 140 210" stroke="${goldColor}" stroke-width="18" fill="none" stroke-linecap="round"/>
-          <path d="M 235 160 L 290 180 L 260 210" stroke="${goldColor}" stroke-width="18" fill="none" stroke-linecap="round"/>
-          <!-- Jeeb hand pointing down -->
-          <polygon points="140,210 130,230 150,225" fill="${goldColor}"/>
-          <polygon points="260,210 270,230 250,225" fill="${goldColor}"/>
+          <circle cx="200" cy="110" r="35" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <polygon points="200,45 185,90 215,90" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <path d="M 165 150 L 235 150 L 220 280 L 180 280 Z" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <path d="M 165 160 L 110 180 L 140 210" stroke="${bodyColor}" stroke-width="22" fill="none" stroke-linecap="round"/>
+          <path d="M 165 160 L 110 180 L 140 210" stroke="${goldColor}" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M 235 160 L 290 180 L 260 210" stroke="${bodyColor}" stroke-width="22" fill="none" stroke-linecap="round"/>
+          <path d="M 235 160 L 290 180 L 260 210" stroke="${goldColor}" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <polygon points="140,210 130,230 150,225" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <polygon points="260,210 270,230 250,225" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
         `;
         break;
 
       case 'jeeb_ngai':
         // Jeeb Ngai: Pinch gesture turned upwards
         path = `
-          <circle cx="200" cy="110" r="35" fill="${goldColor}"/>
-          <polygon points="200,45 185,90 215,90" fill="${goldColor}"/>
-          <path d="M 165 150 L 235 150 L 220 280 L 180 280 Z" fill="${bodyColor}"/>
-          <!-- Arm extended out bent up -->
-          <path d="M 165 160 L 120 180 L 130 140" stroke="${goldColor}" stroke-width="18" fill="none" stroke-linecap="round"/>
-          <path d="M 235 160 L 280 180 L 270 140" stroke="${goldColor}" stroke-width="18" fill="none" stroke-linecap="round"/>
-          <!-- Jeeb hand pointing up -->
-          <polygon points="130,140 120,120 142,125" fill="${goldColor}"/>
-          <polygon points="270,140 280,120 258,125" fill="${goldColor}"/>
+          <circle cx="200" cy="110" r="35" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <polygon points="200,45 185,90 215,90" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <path d="M 165 150 L 235 150 L 220 280 L 180 280 Z" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <path d="M 165 160 L 120 180 L 130 140" stroke="${bodyColor}" stroke-width="22" fill="none" stroke-linecap="round"/>
+          <path d="M 165 160 L 120 180 L 130 140" stroke="${goldColor}" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M 235 160 L 280 180 L 270 140" stroke="${bodyColor}" stroke-width="22" fill="none" stroke-linecap="round"/>
+          <path d="M 235 160 L 280 180 L 270 140" stroke="${goldColor}" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <polygon points="130,140 120,120 142,125" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <polygon points="270,140 280,120 258,125" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
         `;
         break;
 
       case 'jeeb_prok_khang':
         // Jeeb Prok Khang: Jeeb at side of head/temple
         path = `
-          <circle cx="200" cy="110" r="35" fill="${goldColor}"/>
-          <polygon points="200,45 185,90 215,90" fill="${goldColor}"/>
-          <path d="M 165 150 L 235 150 L 220 280 L 180 280 Z" fill="${bodyColor}"/>
-          <!-- Arm raised to side of head -->
-          <path d="M 165 155 C 100 140 110 90 140 100" stroke="${goldColor}" stroke-width="18" fill="none" stroke-linecap="round"/>
-          <path d="M 235 155 C 300 140 290 90 260 100" stroke="${goldColor}" stroke-width="18" fill="none" stroke-linecap="round"/>
-          <polygon points="140,100 152,95 145,115" fill="${goldColor}"/>
-          <polygon points="260,100 248,95 255,115" fill="${goldColor}"/>
+          <circle cx="200" cy="110" r="35" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <polygon points="200,45 185,90 215,90" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <path d="M 165 150 L 235 150 L 220 280 L 180 280 Z" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <path d="M 165 155 C 100 140 110 90 140 100" stroke="${bodyColor}" stroke-width="22" fill="none" stroke-linecap="round"/>
+          <path d="M 165 155 C 100 140 110 90 140 100" stroke="${goldColor}" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M 235 155 C 300 140 290 90 260 100" stroke="${bodyColor}" stroke-width="22" fill="none" stroke-linecap="round"/>
+          <path d="M 235 155 C 300 140 290 90 260 100" stroke="${goldColor}" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <polygon points="140,100 152,95 145,115" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <polygon points="260,100 248,95 255,115" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
         `;
         break;
 
       case 'jeeb_song_lang':
         // Jeeb Song Lang: Arm extended back behind body
         path = `
-          <circle cx="200" cy="110" r="35" fill="${goldColor}"/>
-          <polygon points="200,45 185,90 215,90" fill="${goldColor}"/>
-          <path d="M 165 150 L 235 150 L 220 280 L 180 280 Z" fill="${bodyColor}"/>
-          <!-- Arm pushing back behind body -->
-          <path d="M 165 160 L 100 220 L 70 240" stroke="${goldColor}" stroke-width="18" fill="none" stroke-linecap="round"/>
-          <path d="M 235 160 L 300 220 L 330 240" stroke="${goldColor}" stroke-width="18" fill="none" stroke-linecap="round"/>
-          <polygon points="70,240 55,250 80,255" fill="${goldColor}"/>
-          <polygon points="330,240 345,250 320,255" fill="${goldColor}"/>
+          <circle cx="200" cy="110" r="35" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <polygon points="200,45 185,90 215,90" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <path d="M 165 150 L 235 150 L 220 280 L 180 280 Z" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <path d="M 165 160 L 100 220 L 70 240" stroke="${bodyColor}" stroke-width="22" fill="none" stroke-linecap="round"/>
+          <path d="M 165 160 L 100 220 L 70 240" stroke="${goldColor}" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M 235 160 L 300 220 L 330 240" stroke="${bodyColor}" stroke-width="22" fill="none" stroke-linecap="round"/>
+          <path d="M 235 160 L 300 220 L 330 240" stroke="${goldColor}" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <polygon points="70,240 55,250 80,255" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <polygon points="330,240 345,250 320,255" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
         `;
         break;
 
       case 'jeeb_lor_kaew':
         // Jeeb LOR Kaew: Thumb on middle nail, index gracefully curved
         path = `
-          <circle cx="200" cy="110" r="35" fill="${goldColor}"/>
-          <polygon points="200,45 185,90 215,90" fill="${goldColor}"/>
-          <path d="M 165 150 L 235 150 L 220 280 L 180 280 Z" fill="${bodyColor}"/>
-          <path d="M 165 160 C 100 150 120 120 150 140" stroke="${goldColor}" stroke-width="18" fill="none" stroke-linecap="round"/>
-          <path d="M 235 160 C 300 150 280 120 250 140" stroke="${goldColor}" stroke-width="18" fill="none" stroke-linecap="round"/>
-          <circle cx="150" cy="140" r="14" fill="none" stroke="${goldColor}" stroke-width="6"/>
-          <path d="M 150 126 Q 160 115 165 125" stroke="${goldColor}" stroke-width="6" fill="none"/>
-          <circle cx="250" cy="140" r="14" fill="none" stroke="${goldColor}" stroke-width="6"/>
-          <path d="M 250 126 Q 240 115 235 125" stroke="${goldColor}" stroke-width="6" fill="none"/>
+          <circle cx="200" cy="110" r="35" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <polygon points="200,45 185,90 215,90" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <path d="M 165 150 L 235 150 L 220 280 L 180 280 Z" fill="${bodyColor}" stroke="${goldColor}" stroke-width="2"/>
+          <path d="M 165 160 C 100 150 120 120 150 140" stroke="${bodyColor}" stroke-width="22" fill="none" stroke-linecap="round"/>
+          <path d="M 165 160 C 100 150 120 120 150 140" stroke="${goldColor}" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M 235 160 C 300 150 280 120 250 140" stroke="${bodyColor}" stroke-width="22" fill="none" stroke-linecap="round"/>
+          <path d="M 235 160 C 300 150 280 120 250 140" stroke="${goldColor}" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <circle cx="150" cy="140" r="14" fill="${bodyColor}" stroke="${goldColor}" stroke-width="3"/>
+          <path d="M 150 126 Q 160 115 165 125" stroke="${goldColor}" stroke-width="4" fill="none"/>
+          <circle cx="250" cy="140" r="14" fill="${bodyColor}" stroke="${goldColor}" stroke-width="3"/>
+          <path d="M 250 126 Q 240 115 235 125" stroke="${goldColor}" stroke-width="4" fill="none"/>
         `;
         break;
 
       default:
-        path = `<circle cx="200" cy="150" r="50" fill="${goldColor}"/>`;
+        path = `<circle cx="200" cy="150" r="50" fill="${bodyColor}"/>`;
     }
 
     const svg = `
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 320" width="100%" height="100%">
-        <rect width="400" height="320" rx="16" fill="#1A0005"/>
+        <rect width="400" height="320" rx="16" fill="rgba(0,0,0,0.6)"/>
         <!-- Background Decorative Motif -->
-        <circle cx="200" cy="160" r="140" fill="none" stroke="rgba(212, 175, 55, 0.15)" stroke-width="4" stroke-dasharray="8 8"/>
+        <circle cx="200" cy="160" r="140" fill="none" stroke="rgba(212, 175, 55, 0.2)" stroke-width="3" stroke-dasharray="8 8"/>
         ${path}
       </svg>
     `;

@@ -60,6 +60,31 @@ class AudioEngine {
     });
   }
 
+  // Coin Collect Sound (เสียงเหรียญทองหล่นโปรยลงมา)
+  playCoinSound() {
+    if (this.isMuted) return;
+    this.init();
+
+    const now = this.ctx.currentTime;
+    const notes = [987.77, 1318.51, 1567.98, 1975.53]; // B5, E6, G6, B6
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+
+      gain.gain.setValueAtTime(0.18, now + idx * 0.06);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.3);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now + idx * 0.06);
+      osc.stop(now + idx * 0.06 + 0.32);
+    });
+  }
+
   // Hold Timer Tick (เสียงติ๊กนับถอยหลัง 3-2-1)
   playTick(pitchShift = 1) {
     if (this.isMuted) return;

@@ -288,6 +288,9 @@ body::before {
   height: 100%;
   object-fit: cover;
   transform: scaleX(-1); /* Mirror camera for intuitive user alignment */
+  opacity: 0.92; /* เห็นภาพตนเองที่หน้าจอชัดเจน */
+  filter: contrast(108%) brightness(95%);
+  transition: opacity 0.3s ease;
 }
 
 .skeleton-canvas {
@@ -300,25 +303,27 @@ body::before {
   pointer-events: none;
 }
 
-/* Target Silhouette Overlay over camera */
+/* Target Silhouette Overlay over camera (ภาพต้นฉบับเห็นเป็นภาพลางๆ ตัดสีพื้นหลังขาวออก) */
 .silhouette-overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.4;
   pointer-events: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  mix-blend-mode: screen;
+  z-index: 5;
 }
 
 .silhouette-overlay img {
   max-width: 85%;
   max-height: 85%;
   object-fit: contain;
+  opacity: 0.52; /* มองเห็นภาพต้นฉบับเป็นภาพลางๆ ทาบกับตัวนักเรียน */
+  mix-blend-mode: multiply; /* ตัดสีพื้นหลังขาวออก ให้เห็นเฉพาะเงาสีดำทาบบนกล้อง */
+  filter: contrast(140%);
 }
 
 /* Game Status Overlay Bars */
@@ -348,6 +353,21 @@ body::before {
   gap: 8px;
 }
 
+.score-pill {
+  background: rgba(30, 0, 5, 0.88);
+  border: 2px solid var(--thai-gold-glow);
+  color: var(--thai-gold-light);
+  padding: 8px 18px;
+  border-radius: 30px;
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 700;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .progress-pill {
   background: rgba(30, 0, 5, 0.85);
   border: var(--border-gold);
@@ -357,6 +377,51 @@ body::before {
   font-family: var(--font-heading);
   font-size: 1.1rem;
   font-weight: 600;
+}
+
+/* Falling 5-Baht Coins Animation Overlay */
+.coin-rain-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 90;
+  overflow: hidden;
+}
+
+.coin-particle {
+  position: absolute;
+  top: -60px;
+  width: 46px;
+  height: 46px;
+  background: radial-gradient(circle at 35% 35%, #FFF176 0%, #FBC02D 50%, #F57F17 100%);
+  border: 2px solid #FFF;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: #5D4037;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), inset 0 0 6px rgba(255, 255, 255, 0.8);
+  animation: coinFall linear forwards;
+}
+
+@keyframes coinFall {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(0.8);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) rotate(720deg) scale(1.1);
+    opacity: 0;
+  }
 }
 
 /* Hold Timer Ring (3-Second Delay Check) */

@@ -82,6 +82,9 @@
             <div class="timer-pill">
               ⏱️ <span id="timer-text">3:00</span>
             </div>
+            <div class="score-pill">
+              🪙 <span id="score-text">0</span> คะแนน
+            </div>
             <div class="progress-pill">
               <span id="progress-text">ทำสำเร็จ 0 / 8 ท่า</span>
             </div>
@@ -91,14 +94,17 @@
           <video id="webcam-video" class="video-element" autoplay playsinline muted></video>
           <canvas id="skeleton-canvas" class="skeleton-canvas"></canvas>
 
-          <!-- Silhouette Target Image Overlay -->
+          <!-- Silhouette Target Image Overlay (เงาสีดำต้นฉบับ) -->
           <div class="silhouette-overlay">
             <img id="silhouette-overlay-img" src="" alt="Silhouette Overlay" />
           </div>
 
+          <!-- Falling 5-Baht Coins Rain Effect Container -->
+          <div id="coin-rain-container" class="coin-rain-container"></div>
+
           <!-- 3-Second Hold Delay Progress Ring -->
           <div class="hold-timer-ring">
-            <div id="hold-text" class="hold-text">จัดร่างกายให้ตรงกับเงาต้นฉบับ</div>
+            <div id="hold-text" class="hold-text">จัดเงาลางๆ ของตนเอง ทาบกับเงาสีดำต้นฉบับ</div>
             <div class="progress-bar-track">
               <div id="hold-progress-bar" class="progress-bar-fill"></div>
             </div>
@@ -107,7 +113,7 @@
           <!-- Floating Success Pop-up Modal (✅ Correct!) -->
           <div id="success-pop-modal" class="success-pop-modal">
             <div class="checkmark-icon">✅</div>
-            <div class="success-title">ถูกต้องแล้ว!</div>
+            <div class="success-title">ถูกต้องแล้ว! +5 คะแนน 🪙</div>
           </div>
         </div>
 
@@ -150,7 +156,7 @@
           นักเรียน: 
         </div>
 
-        <div class="summary-score-card">
+        <div class="summary-score-card" style="grid-template-columns: repeat(3, 1fr);">
           <div class="score-box">
             <div id="summary-completed" class="score-num">8 / 8</div>
             <div class="score-label">จำนวนท่าที่ทำสำเร็จ</div>
@@ -159,10 +165,26 @@
             <div id="summary-time" class="score-num" style="color: #4FC3F7;">1:45</div>
             <div class="score-label">เวลาที่ใช้รวม</div>
           </div>
+          <div class="score-box">
+            <div id="summary-total-score" class="score-num" style="color: #FFD700;">60</div>
+            <div class="score-label">คะแนนรวมสุทธิ 🪙</div>
+          </div>
+        </div>
+
+        <!-- Score Breakdown details -->
+        <div style="background: rgba(15,2,5,0.7); border: 1px solid var(--thai-gold); border-radius: 14px; padding: 14px 20px; margin-bottom: 20px; text-align: left; font-size: 0.95rem; line-height: 1.8;">
+          <div style="display: flex; justify-content: space-between;">
+            <span>🪙 คะแนนฐาน (ข้อละ 5 คะแนน):</span>
+            <strong id="summary-base-score">40 คะแนน</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>⚡ คะแนนพิเศษความเร็ว:</span>
+            <strong id="summary-bonus-score" style="color: #00E676;">+20 คะแนน</strong>
+          </div>
         </div>
 
         <div id="summary-badge" style="font-size: 1.2rem; font-weight: 700; margin-bottom: 28px; padding: 12px; background: rgba(0,230,118,0.15); border-radius: 12px; border: 1px solid var(--emerald-green);">
-          🏆 ระดับผลการประเมิน: ดีเยี่ยม (ผ่านเกณฑ์ PA)
+          🏆 ระดับผลการประเมิน: ดีเยี่ยม (ผ่านเกณฑ์ PA 100%)
         </div>
 
         <button id="btn-play-again" class="btn-gold" style="width: 100%; justify-content: center; font-size: 1.2rem; padding: 14px;">
