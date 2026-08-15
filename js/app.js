@@ -568,20 +568,32 @@ class GameApp {
       if (tabBtnImages) tabBtnImages.classList.remove('active');
       if (tabContentAnalytics) tabContentAnalytics.style.display = 'block';
       if (tabContentImages) tabContentImages.style.display = 'none';
+
+      // Load saved Cloud URL into input
+      const inputCloudUrl = document.getElementById('input-cloud-url');
+      if (inputCloudUrl && window.teacherStore) {
+        inputCloudUrl.value = window.teacherStore.getCloudUrl();
+      }
+
       this.renderAnalyticsTable();
     }
   }
 
-  renderAnalyticsTable() {
+  async renderAnalyticsTable() {
     const tbody = document.getElementById('analytics-table-body');
     if (!tbody) return;
+
+    // Fetch latest online centralized cloud logs if cloud URL is connected
+    if (window.teacherStore) {
+      await window.teacherStore.fetchCloudStudentLogs();
+    }
 
     const stats = window.teacherStore.getStudentSummaryStats();
     if (stats.length === 0) {
       tbody.innerHTML = `
         <tr>
           <td colspan="9" style="text-align: center; color: #BBB; padding: 24px;">
-            ยังไม่มีประวัติสถิติการเล่นของนักเรียนในขณะนี้
+            ยังไม่มีประวัติสถิติการเล่นของนักเรียนในขณะนี้ (หากมีนักเรียนเล่นจากมือถืออื่น สามารถเชื่อมต่อ Google Sheet เพื่อรวมสถิติอัตโนมัติได้)
           </td>
         </tr>
       `;
@@ -605,6 +617,48 @@ class GameApp {
         </tr>
       `;
     }).join('');
+  }
+
+  saveCloudConfig() {
+    const inputCloudUrl = document.getElementById('input-cloud-url');
+    if (!inputCloudUrl) return;
+
+    const url = inputCloudUrl.value.trim();
+    if (window.teacherStore) {
+      window.teacherStore.saveCloudUrl(url);
+      window.soundEngine.playBell();
+      alert('บันทึกการเชื่อมต่อออนไลน์ส่วนกลาง (Google Sheet WebApp) เรียบร้อยแล้ว! สถิติจากนักเรียนทุกคนทุกเครื่องจะถูกรวบรวมไว้ที่นี่');
+      this.renderAnalyticsTable();
+    }
+  }
+
+  handleImportLogs(inputElement) {
+    const file = inputElement.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target.result;
+        const imported = JSON.parse(text);
+        if (Array.isArray(imported)) {
+          const current = window.teacherStore.getHistoryLogs();
+          const existingIds = new Set(current.map(l => l.id));
+          imported.forEach(log => {
+            if (!existingIds.has(log.id)) {
+              current.push(log);
+            }
+          });
+          localStorage.setItem(window.teacherStore.STORAGE_KEY_HISTORY, JSON.stringify(current));
+          this.renderAnalyticsTable();
+          window.soundEngine.playBell();
+          alert('นำเข้าและนำสถิตินักเรียนจากมือถือเครื่องอื่นมารวมเรียบร้อยแล้ว!');
+        }
+      } catch (err) {
+        alert('รูปแบบไฟล์สถิติไม่ถูกต้อง');
+      }
+    };
+    reader.readAsText(file);
   }
 
   handleTeacherImportPack(inputElement) {

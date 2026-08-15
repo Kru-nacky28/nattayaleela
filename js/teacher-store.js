@@ -84,7 +84,10 @@ class TeacherStore {
     this.STORAGE_KEY_IMAGES = 'natayasapt_custom_images';
     this.STORAGE_KEY_SETTINGS = 'natayasapt_settings';
     this.STORAGE_KEY_HISTORY = 'natayasapt_student_history';
+    this.STORAGE_KEY_CLOUD_URL = 'natayasapt_cloud_url';
     this.TEACHER_PASSCODE = '2569';
+    // Public Cloud Analytics Backup Endpoint for seamless multi-device centralization
+    this.DEFAULT_CLOUD_ENDPOINT = 'https://jsonbin.org/natayasapt/scores';
   }
 
   // Verify Passcode
@@ -92,7 +95,7 @@ class TeacherStore {
     return String(inputCode).trim() === this.TEACHER_PASSCODE;
   }
 
-  // --- Student History & Analytics Store (ระบบหลังบ้าน) ---
+  // --- Student History & Analytics Store (ระบบหลังบ้านส่วนกลาง) ---
 
   getHistoryLogs() {
     try {
@@ -103,26 +106,89 @@ class TeacherStore {
     }
   }
 
-  saveStudentLog(name, totalScore, baseScore, bonusScore, completedCount, timeUsed) {
+  getCloudUrl() {
+    return localStorage.getItem(this.STORAGE_KEY_CLOUD_URL) || '';
+  }
+
+  saveCloudUrl(url) {
+    localStorage.setItem(this.STORAGE_KEY_CLOUD_URL, url.trim());
+  }
+
+  async saveStudentLog(name, totalScore, baseScore, bonusScore, completedCount, timeUsed) {
+    const newLog = {
+      id: Date.now(),
+      name: name.trim(),
+      totalScore,
+      baseScore,
+      bonusScore,
+      completedCount,
+      timeUsed,
+      timestamp: new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }),
+      device: navigator.userAgent.includes('Mobile') ? 'Mobile' : 'PC'
+    };
+
+    // 1. Save locally in device storage
     try {
       const logs = this.getHistoryLogs();
-      const newLog = {
-        id: Date.now(),
-        name: name.trim(),
-        totalScore,
-        baseScore,
-        bonusScore,
-        completedCount,
-        timeUsed,
-        timestamp: new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })
-      };
       logs.push(newLog);
       localStorage.setItem(this.STORAGE_KEY_HISTORY, JSON.stringify(logs));
-      return newLog;
     } catch (e) {
-      console.error('Failed to save student log', e);
-      return null;
+      console.error('Failed local log save', e);
     }
+
+    // 2. Sync to Central Online Cloud Analytics Server (ส่งสถิติออนไลน์ไปยังหลังบ้านของครู)
+    try {
+      await this.sendCloudStudentLog(newLog);
+    } catch (err) {
+      console.warn('Cloud sync offline fallback', err);
+    }
+
+    return newLog;
+  }
+
+  // Send Student Log to Online Cloud Database / Google Sheet Endpoint
+  async sendCloudStudentLog(logEntry) {
+    const cloudUrl = this.getCloudUrl();
+    if (!cloudUrl) return;
+
+    try {
+      await fetch(cloudUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors',
+        body: JSON.stringify(logEntry)
+      });
+    } catch (e) {
+      console.warn('Failed cloud post', e);
+    }
+  }
+
+  // Fetch Centralized Logs from Cloud Server
+  async fetchCloudStudentLogs() {
+    const cloudUrl = this.getCloudUrl();
+    if (!cloudUrl) return this.getHistoryLogs();
+
+    try {
+      const res = await fetch(cloudUrl);
+      if (res.ok) {
+        const cloudLogs = await res.json();
+        if (Array.isArray(cloudLogs) && cloudLogs.length > 0) {
+          // Merge cloud logs with local logs without duplicates
+          const localLogs = this.getHistoryLogs();
+          const existingIds = new Set(localLogs.map(l => l.id));
+          cloudLogs.forEach(cl => {
+            if (!existingIds.has(cl.id)) {
+              localLogs.push(cl);
+            }
+          });
+          localStorage.setItem(this.STORAGE_KEY_HISTORY, JSON.stringify(localLogs));
+          return localLogs;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not fetch cloud logs', e);
+    }
+    return this.getHistoryLogs();
   }
 
   clearHistory() {
